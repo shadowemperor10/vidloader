@@ -20,14 +20,14 @@ def sanitize_filename(name):
 
 # Size limits per platform (in bytes)
 SIZE_LIMITS = {
-    "youtube":   1 * 1024 * 1024 * 1024,   # 1 GB
+    "youtube":   None,                       # No limit for YouTube
     "tiktok":    500 * 1024 * 1024,          # 500 MB
     "instagram": 500 * 1024 * 1024,          # 500 MB
     "other":     500 * 1024 * 1024,          # 500 MB
 }
 
 SIZE_LABELS = {
-    "youtube":   "1GB",
+    "youtube":   "Unlimited",
     "tiktok":    "500MB",
     "instagram": "500MB",
     "other":     "500MB",
@@ -50,8 +50,11 @@ def run_download(job_id, url, platform):
         "-o", output_template,
         "--merge-output-format", "mp4",
         "--newline",
-        "--max-filesize", str(size_limit),
     ]
+
+    # Only add size limit if one exists for this platform
+    if size_limit is not None:
+        yt_dlp_args += ["--max-filesize", str(size_limit)]
 
     if platform == "youtube":
         yt_dlp_args += ["-f", "bestvideo+bestaudio/best"]
@@ -107,7 +110,7 @@ def run_download(job_id, url, platform):
                     os.rename(old_path, new_path)
                 # Double-check actual file size
                 actual_size = os.path.getsize(new_path)
-                if actual_size > size_limit:
+                if size_limit is not None and actual_size > size_limit:
                     os.remove(new_path)
                     jobs[job_id]["status"] = "error"
                     jobs[job_id]["error"] = f"❌ File exceeds the {SIZE_LABELS.get(platform, '500MB')} limit for {platform.title()}."
