@@ -13,18 +13,27 @@ CORS(app)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+# ── Auto-update yt-dlp on every startup so it never goes stale ──
+try:
+    subprocess.run(
+        ["pip", "install", "--upgrade", "yt-dlp"],
+        capture_output=True, timeout=120
+    )
+except Exception:
+    pass
+
+
 def sanitize_filename(name):
-    # Remove special characters that break URLs (#, &, %, etc.)
     name = re.sub(r'[\\/*?:"<>|#&%=+@!$^{}\[\]()\',;~`]', "_", name)
     name = re.sub(r'_+', '_', name)
     return name.strip('_')
 
-# Size limits per platform (in bytes)
+
 SIZE_LIMITS = {
-    "youtube":   None,                       # No limit for YouTube
-    "tiktok":    500 * 1024 * 1024,          # 500 MB
-    "instagram": 500 * 1024 * 1024,          # 500 MB
-    "other":     500 * 1024 * 1024,          # 500 MB
+    "youtube":   None,
+    "tiktok":    500 * 1024 * 1024,
+    "instagram": 500 * 1024 * 1024,
+    "other":     500 * 1024 * 1024,
 }
 
 SIZE_LABELS = {
@@ -34,8 +43,22 @@ SIZE_LABELS = {
     "other":     "500MB",
 }
 
-# In-memory job tracker
 jobs = {}
+
+
+def yt_dlp_base_args():
+    """Common yt-dlp args that help bypass bot-detection on cloud IPs."""
+    return [
+        "yt-dlp",
+        "--no-playlist",
+        # Try android client first – most reliable on cloud IPs
+        "--extractor-args", "youtube:player_client=android,web",
+        # Fake a real browser UA
+        "--user-agent",
+        "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        "--no-check-certificates",
+    ]
 
 
 def run_download(job_id, url, platform, quality="best"):
@@ -45,15 +68,12 @@ def run_download(job_id, url, platform, quality="best"):
     output_template = os.path.join(DOWNLOAD_DIR, f"{job_id}_%(title)s.%(ext)s")
     size_limit = SIZE_LIMITS.get(platform, SIZE_LIMITS["other"])
 
-    yt_dlp_args = [
-        "yt-dlp",
-        "--no-playlist",
+    yt_dlp_args = yt_dlp_base_args() + [
         "-o", output_template,
         "--merge-output-format", "mp4",
         "--newline",
     ]
 
-    # Only add size limit if one exists for this platform
     if size_limit is not None:
         yt_dlp_args += ["--max-filesize", str(size_limit)]
 
@@ -61,25 +81,16 @@ def run_download(job_id, url, platform, quality="best"):
     if platform == "youtube":
         if quality == "best":
             yt_dlp_args += ["-f", "bestvideo+bestaudio/best"]
-        elif quality == "1080p":
-            yt_dlp_args += ["-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]"]
-        elif quality == "720p":
-            yt_dlp_args += ["-f", "bestvideo[height<=720]+bestaudio/best[height<=720]"]
-        elif quality == "480p":
-            yt_dlp_args += ["-f", "bestvideo[height<=480]+bestaudio/best[height<=480]"]
-        elif quality == "360p":
-            yt_dlp_args += ["-f", "bestvideo[height<=360]+bestaudio/best[height<=360]"]
         elif quality == "audio":
-            yt_dlp_args += ["-f", "bestaudio", "-x", "--audio-format", "mp3"]
-            # Change output for audio
-            output_template = os.path.join(DOWNLOAD_DIR, f"{job_id}_%(title)s.%(ext)s")
-            yt_dlp_args[yt_dlp_args.index(os.path.join(DOWNLOAD_DIR, f"{job_id}_%(title)s.%(ext)s"))] = output_template
-            # Remove merge-output-format for audio
+            # Remove merge-output-format for audio-only
             yt_dlp_args.remove("--merge-output-format")
             yt_dlp_args.remove("mp4")
+            yt_dlp_args += ["-f", "bestaudio", "-x", "--audio-format", "mp3"]
         else:
-            yt_dlp_args += ["-f", "bestvideo+bestaudio/best"]
-    elif platform in ["tiktok", "instagram", "other"]:
+            # e.g. "1080p" → height<=1080
+            h = quality.replace("p", "")
+            yt_dlp_args += ["-f", f"bestvideo[height<={h}]+bestaudio/best[height<={h}]"]
+    else:
         yt_dlp_args += ["-f", "best"]
 
     yt_dlp_args.append(url)
@@ -96,22 +107,22 @@ def run_download(job_id, url, platform, quality="best"):
             line = line.strip()
             jobs[job_id]["log"] = line
 
-            # Parse progress
             if "[download]" in line and "%" in line:
                 match = re.search(r"(\d+\.\d+)%", line)
                 if match:
                     jobs[job_id]["progress"] = float(match.group(1))
 
-            # Parse filename
             if "Destination:" in line:
                 fname = line.split("Destination:")[-1].strip()
                 jobs[job_id]["filename"] = os.path.basename(fname)
 
-            # File too large
             if "File is larger than max-filesize" in line or "larger than" in line:
                 process.kill()
                 jobs[job_id]["status"] = "error"
-                jobs[job_id]["error"] = f"❌ File exceeds the {SIZE_LABELS.get(platform, '500MB')} limit for {platform.title()}."
+                jobs[job_id]["error"] = (
+                    f"❌ File exceeds the {SIZE_LABELS.get(platform, '500MB')} "
+                    f"limit for {platform.title()}."
+                )
                 return
 
         process.wait()
@@ -120,17 +131,18 @@ def run_download(job_id, url, platform, quality="best"):
             files = [f for f in os.listdir(DOWNLOAD_DIR) if f.startswith(job_id)]
             if files:
                 old_path = os.path.join(DOWNLOAD_DIR, files[0])
-                # Sanitize filename to remove URL-breaking characters
                 clean_name = sanitize_filename(files[0])
                 new_path = os.path.join(DOWNLOAD_DIR, clean_name)
                 if old_path != new_path:
                     os.rename(old_path, new_path)
-                # Double-check actual file size
                 actual_size = os.path.getsize(new_path)
                 if size_limit is not None and actual_size > size_limit:
                     os.remove(new_path)
                     jobs[job_id]["status"] = "error"
-                    jobs[job_id]["error"] = f"❌ File exceeds the {SIZE_LABELS.get(platform, '500MB')} limit for {platform.title()}."
+                    jobs[job_id]["error"] = (
+                        f"❌ File exceeds the {SIZE_LABELS.get(platform, '500MB')} "
+                        f"limit for {platform.title()}."
+                    )
                     return
                 jobs[job_id]["status"] = "done"
                 jobs[job_id]["progress"] = 100
@@ -146,7 +158,6 @@ def run_download(job_id, url, platform, quality="best"):
         jobs[job_id]["status"] = "error"
         jobs[job_id]["error"] = str(e)
     finally:
-        # Clean up file after 10 minutes
         def cleanup():
             import time
             time.sleep(600)
@@ -154,7 +165,7 @@ def run_download(job_id, url, platform, quality="best"):
                 if f.startswith(job_id):
                     try:
                         os.remove(os.path.join(DOWNLOAD_DIR, f))
-                    except:
+                    except Exception:
                         pass
         threading.Thread(target=cleanup, daemon=True).start()
 
@@ -180,12 +191,20 @@ def get_info():
         return jsonify({"error": "URL is required"}), 400
 
     try:
-        result = subprocess.run(
-            ["yt-dlp", "--dump-json", "--no-playlist", url],
-            capture_output=True, text=True, timeout=30
-        )
+        cmd = yt_dlp_base_args() + ["--dump-json", url]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
         if result.returncode != 0:
-            return jsonify({"error": "Could not fetch video info. Check the URL."}), 400
+            # Surface the real yt-dlp error so it's easier to debug
+            err_msg = (result.stderr or result.stdout or "").strip()
+            # Find the most useful line (last ERROR: line)
+            for line in reversed(err_msg.splitlines()):
+                if "ERROR" in line or "error" in line.lower():
+                    err_msg = line.strip()
+                    break
+            return jsonify({
+                "error": f"Could not fetch video info. {err_msg[:200] or 'Check the URL.'}"
+            }), 400
 
         info = json.loads(result.stdout)
         title     = info.get("title", "Unknown")
@@ -193,7 +212,6 @@ def get_info():
         duration  = info.get("duration_string", "")
         uploader  = info.get("uploader", "")
 
-        # Detect platform
         webpage_url = info.get("webpage_url", url)
         if "youtube.com" in webpage_url or "youtu.be" in webpage_url:
             platform = "youtube"
@@ -204,7 +222,6 @@ def get_info():
         else:
             platform = "other"
 
-        # Build quality options
         formats = info.get("formats", [])
         seen_heights = set()
         qualities = []
@@ -212,26 +229,24 @@ def get_info():
         if platform == "youtube":
             for f in formats:
                 h = f.get("height")
-                ext = f.get("ext", "")
                 vcodec = f.get("vcodec", "none")
                 if h and vcodec != "none" and h not in seen_heights:
                     seen_heights.add(h)
                     label = f"{h}p"
-                    if h >= 2160: label = f"4K ({h}p)"
-                    elif h >= 1440: label = f"2K ({h}p)"
+                    if h >= 2160:
+                        label = f"4K ({h}p)"
+                    elif h >= 1440:
+                        label = f"2K ({h}p)"
                     qualities.append({"label": label, "value": f"{h}p", "type": "video"})
 
-            # Sort highest first
-            qualities.sort(key=lambda x: int(x["value"].replace("p","").split("(")[-1].replace("p","")), reverse=True)
-
-            # Add best option at top
+            qualities.sort(
+                key=lambda x: int(x["value"].replace("p", "").split("(")[-1].replace("p", "")),
+                reverse=True
+            )
             qualities.insert(0, {"label": "🏆 Best Quality", "value": "best", "type": "video"})
-            # Add audio
             qualities.append({"label": "🎵 Audio Only (MP3)", "value": "audio", "type": "audio"})
         else:
-            qualities = [
-                {"label": "🏆 Best Quality", "value": "best", "type": "video"},
-            ]
+            qualities = [{"label": "🏆 Best Quality", "value": "best", "type": "video"}]
 
         return jsonify({
             "title": title,
@@ -251,13 +266,12 @@ def get_info():
 @app.route("/api/download", methods=["POST"])
 def start_download():
     data = request.json
-    url = data.get("url", "").strip()
+    url     = data.get("url", "").strip()
     quality = data.get("quality", "best")
 
     if not url:
         return jsonify({"error": "URL is required"}), 400
 
-    # Auto-detect platform
     if "youtube.com" in url or "youtu.be" in url:
         platform = "youtube"
     elif "tiktok.com" in url:
@@ -269,13 +283,13 @@ def start_download():
 
     job_id = str(uuid.uuid4())[:8]
     jobs[job_id] = {
-        "status": "queued",
-        "progress": 0,
-        "filename": None,
-        "error": None,
-        "log": "",
-        "platform": platform,
-        "quality": quality,
+        "status":     "queued",
+        "progress":   0,
+        "filename":   None,
+        "error":      None,
+        "log":        "",
+        "platform":   platform,
+        "quality":    quality,
         "size_limit": SIZE_LABELS.get(platform, "500MB"),
     }
 
