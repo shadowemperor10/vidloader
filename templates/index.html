@@ -321,6 +321,34 @@
       margin-bottom: 14px; display: block; position: relative; z-index: 1;
     }
     .input-row { display: flex; gap: 10px; position: relative; z-index: 1; }
+
+    /* Quality selector */
+    .quality-row {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 14px; position: relative; z-index: 1;
+    }
+    .quality-btn {
+      padding: 7px 14px; border-radius: 99px;
+      border: 1px solid rgba(138,80,255,0.25);
+      background: rgba(138,80,255,0.06);
+      color: var(--subtext); font-size: 12px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quality-btn:hover { border-color: rgba(138,80,255,0.5); color: var(--text); }
+    .quality-btn.active {
+      background: linear-gradient(135deg, #8a50ff, #c060ff);
+      border-color: transparent; color: #fff;
+      box-shadow: 0 0 14px rgba(138,80,255,0.4);
+    }
+    .quality-label {
+      font-size: 11px; font-weight: 700; color: var(--subtext);
+      letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 10px; display: block; position: relative; z-index: 1;
+    }
+    /* Only show quality for YouTube */
+    .quality-section { display: none; }
+    .quality-section.visible { display: block; }
     .url-input {
       flex: 1; padding: 15px 18px; border-radius: 12px;
       border: 1px solid rgba(138,80,255,0.2);
@@ -620,8 +648,21 @@
       <div class="input-row">
         <input type="url" id="urlInput" class="url-input"
           placeholder="https://www.youtube.com/watch?v=..."
-          autocomplete="off" spellcheck="false"/>
+          autocomplete="off" spellcheck="false" oninput="detectPlatform(this.value)"/>
         <button class="btn-download" id="dlBtn" onclick="startDownload()">Download</button>
+      </div>
+
+      <!-- Quality selector (shown only for YouTube) -->
+      <div class="quality-section" id="qualitySection" style="margin-top:16px;">
+        <span class="quality-label">Select Quality</span>
+        <div class="quality-row">
+          <button class="quality-btn active" onclick="setQuality('best',this)">🏆 Best</button>
+          <button class="quality-btn" onclick="setQuality('1080p',this)">🎬 1080p</button>
+          <button class="quality-btn" onclick="setQuality('720p',this)">📺 720p</button>
+          <button class="quality-btn" onclick="setQuality('480p',this)">📱 480p</button>
+          <button class="quality-btn" onclick="setQuality('360p',this)">💾 360p</button>
+          <button class="quality-btn" onclick="setQuality('audio',this)">🎵 Audio MP3</button>
+        </div>
       </div>
     </div>
   </div>
@@ -882,9 +923,34 @@ const placeholders = {
   other:     'https://twitter.com/user/status/...'
 };
 
+let selectedQuality = 'best';
+
+function setQuality(q, btn) {
+  selectedQuality = q;
+  document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function detectPlatform(url) {
+  const qs = document.getElementById('qualitySection');
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    qs.classList.add('visible');
+  } else {
+    qs.classList.remove('visible');
+    selectedQuality = 'best';
+  }
+}
+
 function setPlaceholder(p) {
   document.getElementById('urlInput').placeholder = placeholders[p];
   document.getElementById('urlInput').focus();
+  const qs = document.getElementById('qualitySection');
+  if (p === 'youtube') {
+    qs.classList.add('visible');
+  } else {
+    qs.classList.remove('visible');
+    selectedQuality = 'best';
+  }
 }
 
 let pollInterval = null;
@@ -910,7 +976,7 @@ async function startDownload() {
     const res = await fetch('/api/download', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({url})
+      body: JSON.stringify({url, quality: selectedQuality})
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);

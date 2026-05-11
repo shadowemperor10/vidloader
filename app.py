@@ -37,7 +37,7 @@ SIZE_LABELS = {
 jobs = {}
 
 
-def run_download(job_id, url, platform):
+def run_download(job_id, url, platform, quality="best"):
     jobs[job_id]["status"] = "downloading"
     jobs[job_id]["progress"] = 0
 
@@ -56,13 +56,29 @@ def run_download(job_id, url, platform):
     if size_limit is not None:
         yt_dlp_args += ["--max-filesize", str(size_limit)]
 
+    # Quality selection
     if platform == "youtube":
-        yt_dlp_args += ["-f", "bestvideo+bestaudio/best"]
-    elif platform == "tiktok":
-        yt_dlp_args += ["-f", "best"]
-    elif platform == "instagram":
-        yt_dlp_args += ["-f", "best"]
-    else:
+        if quality == "best":
+            yt_dlp_args += ["-f", "bestvideo+bestaudio/best"]
+        elif quality == "1080p":
+            yt_dlp_args += ["-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]"]
+        elif quality == "720p":
+            yt_dlp_args += ["-f", "bestvideo[height<=720]+bestaudio/best[height<=720]"]
+        elif quality == "480p":
+            yt_dlp_args += ["-f", "bestvideo[height<=480]+bestaudio/best[height<=480]"]
+        elif quality == "360p":
+            yt_dlp_args += ["-f", "bestvideo[height<=360]+bestaudio/best[height<=360]"]
+        elif quality == "audio":
+            yt_dlp_args += ["-f", "bestaudio", "-x", "--audio-format", "mp3"]
+            # Change output for audio
+            output_template = os.path.join(DOWNLOAD_DIR, f"{job_id}_%(title)s.%(ext)s")
+            yt_dlp_args[yt_dlp_args.index(os.path.join(DOWNLOAD_DIR, f"{job_id}_%(title)s.%(ext)s"))] = output_template
+            # Remove merge-output-format for audio
+            yt_dlp_args.remove("--merge-output-format")
+            yt_dlp_args.remove("mp4")
+        else:
+            yt_dlp_args += ["-f", "bestvideo+bestaudio/best"]
+    elif platform in ["tiktok", "instagram", "other"]:
         yt_dlp_args += ["-f", "best"]
 
     yt_dlp_args.append(url)
@@ -159,6 +175,7 @@ def service_worker():
 def start_download():
     data = request.json
     url = data.get("url", "").strip()
+    quality = data.get("quality", "best")
 
     if not url:
         return jsonify({"error": "URL is required"}), 400
@@ -181,10 +198,11 @@ def start_download():
         "error": None,
         "log": "",
         "platform": platform,
+        "quality": quality,
         "size_limit": SIZE_LABELS.get(platform, "500MB"),
     }
 
-    t = threading.Thread(target=run_download, args=(job_id, url, platform))
+    t = threading.Thread(target=run_download, args=(job_id, url, platform, quality))
     t.daemon = True
     t.start()
 
