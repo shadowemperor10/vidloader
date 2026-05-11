@@ -52,7 +52,7 @@ def yt_dlp_base_args():
         "yt-dlp",
         "--no-playlist",
         # Try android client first – most reliable on cloud IPs
-        "--extractor-args", "youtube:player_client=android,web",
+        "--extractor-args", "youtube:player_client=ios,android,web",
         # Fake a real browser UA
         "--user-agent",
         "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 "
