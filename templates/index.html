@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VidLoader — Download Videos in Max Quality</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,14 +25,13 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       min-height: 100vh;
       color: var(--text);
       overflow-x: hidden;
     }
 
-    /* Floating background blobs */
     .blob {
       position: fixed;
       border-radius: 50%;
@@ -59,16 +58,10 @@
       padding: 60px 24px 80px;
     }
 
-    /* Header */
-    .header {
-      text-align: center;
-      margin-bottom: 56px;
-    }
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 48px; }
     .logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
+      display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px;
     }
     .logo-icon {
       width: 52px; height: 52px;
@@ -79,66 +72,100 @@
       box-shadow: 0 8px 24px rgba(124,58,237,0.3);
     }
     .logo-text {
-      font-size: 28px;
-      font-weight: 700;
+      font-size: 28px; font-weight: 700;
       background: linear-gradient(135deg, #7c3aed, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
       letter-spacing: -0.5px;
     }
-    .tagline {
-      font-size: 16px;
-      color: var(--subtext);
-      font-weight: 400;
-      letter-spacing: 0.2px;
-    }
+    .tagline { font-size: 15px; color: var(--subtext); margin-bottom: 18px; }
 
-    /* Platform cards — 4 gradient boxes */
+    /* Creator badge */
+    .creator-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--glass);
+      border: 1.5px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      border-radius: 99px;
+      padding: 8px 18px;
+      font-size: 13px;
+      color: var(--subtext);
+      box-shadow: 0 4px 16px rgba(100,60,200,0.08);
+    }
+    .creator-bar span { font-weight: 600; color: var(--text); }
+    .creator-links { display: flex; gap: 10px; align-items: center; }
+    .creator-links a {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 12px; font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.18s, box-shadow 0.18s;
+    }
+    .creator-links a:hover { transform: translateY(-2px); }
+    .link-yt  { background: linear-gradient(135deg, #ff6b6b, #ee0979); color: #fff; box-shadow: 0 4px 12px rgba(238,9,121,0.3); }
+    .link-tt  { background: linear-gradient(135deg, #010101, #2d2d2d); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+    .link-ig  { background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff; box-shadow: 0 4px 12px rgba(220,39,67,0.3); }
+
+    /* ── Limits Banner ── */
+    .limits-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+    .limit-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 16px;
+      border-radius: 99px;
+      font-size: 12px; font-weight: 600;
+      border: 1.5px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+    }
+    .limit-pill.yt  { background: var(--grad1); }
+    .limit-pill.tt  { background: var(--grad2); }
+    .limit-pill.ig  { background: var(--grad3); }
+
+    /* ── Platform cards ── */
     .platforms {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
-      margin-bottom: 40px;
+      margin-bottom: 32px;
     }
     .platform-card {
       padding: 22px 20px;
       border-radius: var(--radius);
       border: 1.5px solid var(--glass-border);
       backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
       text-align: center;
       cursor: pointer;
       transition: transform 0.22s ease, box-shadow 0.22s ease;
-      position: relative;
-      overflow: hidden;
     }
-    .platform-card::before {
-      content: '';
-      position: absolute; inset: 0;
-      opacity: 0.18;
-      transition: opacity 0.22s;
+    .platform-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+    .platform-card.youtube   { background: var(--grad1); }
+    .platform-card.tiktok    { background: var(--grad2); }
+    .platform-card.instagram { background: var(--grad3); }
+    .platform-card.all       { background: var(--grad4); }
+    .platform-card .p-icon  { font-size: 34px; margin-bottom: 8px; display: block; }
+    .platform-card .p-name  { font-size: 14px; font-weight: 600; color: var(--text); }
+    .platform-card .p-desc  { font-size: 12px; color: var(--subtext); margin-top: 4px; }
+    .platform-card .p-limit {
+      margin-top: 8px;
+      display: inline-block;
+      padding: 3px 10px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 99px;
+      font-size: 11px; font-weight: 700;
+      color: var(--accent);
     }
-    .platform-card:hover { transform: translateY(-4px); }
-    .platform-card.youtube  { background: var(--grad1); }
-    .platform-card.tiktok   { background: var(--grad2); }
-    .platform-card.instagram{ background: var(--grad3); }
-    .platform-card.all      { background: var(--grad4); }
-    .platform-card .p-icon { font-size: 34px; margin-bottom: 8px; display: block; }
-    .platform-card .p-name {
-      font-size: 14px; font-weight: 600;
-      color: var(--text); letter-spacing: 0.3px;
-    }
-    .platform-card .p-desc {
-      font-size: 12px; color: var(--subtext); margin-top: 4px;
-    }
-    .platform-card:hover { box-shadow: var(--shadow); }
 
-    /* Main input card */
+    /* ── Input card ── */
     .input-card {
       background: var(--glass);
       backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
       border: 1.5px solid var(--glass-border);
       border-radius: var(--radius);
       padding: 36px 32px;
@@ -146,178 +173,97 @@
       margin-bottom: 28px;
     }
     .input-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--subtext);
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      display: block;
+      font-size: 13px; font-weight: 600; color: var(--subtext);
+      letter-spacing: 0.8px; text-transform: uppercase;
+      margin-bottom: 12px; display: block;
     }
-    .input-row {
-      display: flex;
-      gap: 12px;
-      align-items: stretch;
-    }
+    .input-row { display: flex; gap: 12px; align-items: stretch; }
     .url-input {
       flex: 1;
       padding: 16px 20px;
       border-radius: 14px;
       border: 1.5px solid rgba(124,58,237,0.2);
       background: rgba(255,255,255,0.7);
-      font-size: 15px;
-      font-family: inherit;
-      color: var(--text);
+      font-size: 15px; font-family: inherit; color: var(--text);
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .url-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
-    }
+    .url-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }
     .url-input::placeholder { color: #b0b0b8; }
 
     .btn-download {
-      padding: 16px 28px;
-      border-radius: 14px;
-      border: none;
+      padding: 16px 28px; border-radius: 14px; border: none;
       background: linear-gradient(135deg, #7c3aed, #3b82f6);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      white-space: nowrap;
+      color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+      cursor: pointer; white-space: nowrap;
       transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
       box-shadow: 0 6px 24px rgba(124,58,237,0.35);
-      letter-spacing: 0.2px;
     }
     .btn-download:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(124,58,237,0.4); }
-    .btn-download:active { transform: translateY(0); }
     .btn-download:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* Progress area */
+    /* ── Progress card ── */
     .progress-card {
-      background: var(--glass);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: var(--glass); backdrop-filter: blur(24px);
       border: 1.5px solid var(--glass-border);
-      border-radius: var(--radius);
-      padding: 28px 32px;
-      box-shadow: var(--shadow);
-      margin-bottom: 28px;
-      display: none;
+      border-radius: var(--radius); padding: 28px 32px;
+      box-shadow: var(--shadow); margin-bottom: 28px; display: none;
     }
     .progress-card.visible { display: block; }
-
-    .progress-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 16px;
-    }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .progress-title { font-size: 15px; font-weight: 600; }
     .progress-pct {
       font-size: 14px; font-weight: 700;
       background: linear-gradient(135deg, #7c3aed, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
     }
-    .progress-bar-track {
-      height: 8px;
-      border-radius: 99px;
-      background: rgba(124,58,237,0.1);
-      overflow: hidden;
-      margin-bottom: 14px;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      border-radius: 99px;
-      background: linear-gradient(90deg, #a78bfa, #60a5fa);
-      transition: width 0.4s ease;
-      width: 0%;
-    }
-    .progress-status {
-      font-size: 13px;
-      color: var(--subtext);
-    }
+    .progress-bar-track { height: 8px; border-radius: 99px; background: rgba(124,58,237,0.1); overflow: hidden; margin-bottom: 14px; }
+    .progress-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #a78bfa, #60a5fa); transition: width 0.4s ease; width: 0%; }
+    .progress-status { font-size: 13px; color: var(--subtext); }
     .progress-status.error { color: #ef4444; }
-    .progress-status.done { color: #22c55e; font-weight: 600; }
+    .progress-status.done  { color: #22c55e; font-weight: 600; }
 
     .btn-save {
       margin-top: 18px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 13px 26px;
-      border-radius: 12px;
-      border: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 26px; border-radius: 12px; border: none;
       background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      text-decoration: none;
+      color: #fff; font-size: 15px; font-weight: 600; font-family: inherit;
+      cursor: pointer; text-decoration: none;
       transition: transform 0.18s, box-shadow 0.18s;
       box-shadow: 0 6px 20px rgba(34,197,94,0.3);
     }
     .btn-save:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(34,197,94,0.38); }
 
-    /* How it works */
+    /* ── How it works ── */
     .how-section { margin-top: 20px; }
-    .section-title {
-      font-size: 19px; font-weight: 700;
-      text-align: center; margin-bottom: 20px;
-      color: var(--text);
-      letter-spacing: -0.3px;
-    }
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-    }
-    .step-card {
-      padding: 24px 20px;
-      border-radius: var(--radius);
-      border: 1.5px solid var(--glass-border);
-      backdrop-filter: blur(16px);
-      text-align: center;
-    }
+    .section-title { font-size: 19px; font-weight: 700; text-align: center; margin-bottom: 20px; letter-spacing: -0.3px; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .step-card { padding: 24px 20px; border-radius: var(--radius); border: 1.5px solid var(--glass-border); backdrop-filter: blur(16px); text-align: center; }
     .step-card:nth-child(1) { background: var(--grad4); }
     .step-card:nth-child(2) { background: var(--grad1); }
     .step-card:nth-child(3) { background: var(--grad2); }
     .step-card:nth-child(4) { background: var(--grad3); }
-    .step-num {
-      width: 36px; height: 36px;
-      background: rgba(255,255,255,0.65);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 700;
-      color: var(--accent);
-      margin: 0 auto 12px;
-    }
+    .step-num { width: 36px; height: 36px; background: rgba(255,255,255,0.65); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: var(--accent); margin: 0 auto 12px; }
     .step-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
     .step-card p { font-size: 12px; color: var(--subtext); line-height: 1.5; }
 
-    /* Footer */
+    /* ── Footer ── */
     .footer {
-      text-align: center;
-      margin-top: 60px;
-      font-size: 12px;
-      color: #aaa;
+      text-align: center; margin-top: 60px; font-size: 13px; color: #999;
+      border-top: 1px solid rgba(255,255,255,0.5); padding-top: 32px;
     }
-    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .footer .made-by {
+      margin-top: 10px; font-size: 12px; color: #bbb;
+    }
+    .footer .made-by strong { color: var(--accent); }
 
-    /* Spinner */
     .spinner {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 6px;
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -325,6 +271,7 @@
       .input-row { flex-direction: column; }
       .input-card { padding: 24px 20px; }
       .container { padding: 40px 16px 60px; }
+      .creator-bar { flex-direction: column; gap: 8px; border-radius: 18px; }
     }
   </style>
 </head>
@@ -343,43 +290,63 @@
       <span class="logo-text">VidLoader</span>
     </div>
     <p class="tagline">Download YouTube, TikTok & Instagram videos in maximum quality.</p>
+
+    <!-- Creator badge -->
+    <div style="display:flex; justify-content:center; margin-top: 16px;">
+      <div class="creator-bar">
+        <span>Created by <span>k1llez</span></span>
+        <div class="creator-links">
+          <a class="link-yt" href="https://youtube.com/@killeztt?si=Q_OrL8btKVvhpmrW" target="_blank">▶ YouTube</a>
+          <a class="link-tt" href="https://www.tiktok.com/@k1llez.tt" target="_blank">♪ TikTok</a>
+          <a class="link-ig" href="https://www.instagram.com/k1llez.tt?igsh=MW1xN3prazRteXpxZg==" target="_blank">📸 Instagram</a>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Platform cards (4 gradient boxes) -->
+  <!-- Size Limits Banner -->
+  <div class="limits-bar">
+    <div class="limit-pill yt">▶️ YouTube — Max <strong>&nbsp;1 GB</strong></div>
+    <div class="limit-pill tt">🎵 TikTok — Max <strong>&nbsp;500 MB</strong></div>
+    <div class="limit-pill ig">📸 Instagram — Max <strong>&nbsp;500 MB</strong></div>
+  </div>
+
+  <!-- Platform cards -->
   <div class="platforms">
     <div class="platform-card youtube" onclick="setPlaceholder('youtube')">
       <span class="p-icon">▶️</span>
       <div class="p-name">YouTube</div>
       <div class="p-desc">4K · 1080p · 720p</div>
+      <span class="p-limit">Max 1 GB</span>
     </div>
     <div class="platform-card tiktok" onclick="setPlaceholder('tiktok')">
       <span class="p-icon">🎵</span>
       <div class="p-name">TikTok</div>
       <div class="p-desc">HD · No watermark</div>
+      <span class="p-limit">Max 500 MB</span>
     </div>
     <div class="platform-card instagram" onclick="setPlaceholder('instagram')">
       <span class="p-icon">📸</span>
       <div class="p-name">Instagram</div>
       <div class="p-desc">Reels · Posts · Stories</div>
+      <span class="p-limit">Max 500 MB</span>
     </div>
     <div class="platform-card all" onclick="setPlaceholder('other')">
       <span class="p-icon">🌐</span>
       <div class="p-name">1000+ Sites</div>
       <div class="p-desc">Twitter · Vimeo · more</div>
+      <span class="p-limit">Max 500 MB</span>
     </div>
   </div>
 
-  <!-- URL Input card -->
+  <!-- URL Input -->
   <div class="input-card">
     <span class="input-label">Paste your video link</span>
     <div class="input-row">
       <input
-        type="url"
-        id="urlInput"
-        class="url-input"
+        type="url" id="urlInput" class="url-input"
         placeholder="https://www.youtube.com/watch?v=..."
-        autocomplete="off"
-        spellcheck="false"
+        autocomplete="off" spellcheck="false"
       />
       <button class="btn-download" id="dlBtn" onclick="startDownload()">
         Download
@@ -429,18 +396,24 @@
     </div>
   </div>
 
+  <!-- Footer -->
   <div class="footer">
-    <p>VidLoader uses <a href="https://github.com/yt-dlp/yt-dlp" target="_blank">yt-dlp</a> under the hood. For personal use only. Respect copyright laws.</p>
+    <p>For personal use only. Please respect copyright laws & platform terms of service.</p>
+    <p class="made-by">Made with ❤️ by <strong>k1llez</strong> &nbsp;·&nbsp;
+      <a href="https://youtube.com/@killeztt?si=Q_OrL8btKVvhpmrW" target="_blank">YouTube</a> &nbsp;·&nbsp;
+      <a href="https://www.tiktok.com/@k1llez.tt" target="_blank">TikTok</a> &nbsp;·&nbsp;
+      <a href="https://www.instagram.com/k1llez.tt?igsh=MW1xN3prazRteXpxZg==" target="_blank">Instagram</a>
+    </p>
   </div>
 
 </div>
 
 <script>
   const placeholders = {
-    youtube: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    tiktok: 'https://www.tiktok.com/@user/video/...',
+    youtube:   'https://www.youtube.com/watch?v=...',
+    tiktok:    'https://www.tiktok.com/@k1llez.tt/video/...',
     instagram: 'https://www.instagram.com/reel/...',
-    other: 'https://twitter.com/user/status/...'
+    other:     'https://twitter.com/user/status/...'
   };
 
   function setPlaceholder(platform) {
@@ -452,16 +425,12 @@
 
   async function startDownload() {
     const url = document.getElementById('urlInput').value.trim();
-    if (!url) {
-      alert('Please paste a video URL first!');
-      return;
-    }
+    if (!url) { alert('Please paste a video URL first!'); return; }
 
     const btn = document.getElementById('dlBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Starting…';
 
-    // Show progress card
     const card = document.getElementById('progressCard');
     card.classList.add('visible');
     document.getElementById('progressTitle').textContent = 'Preparing download…';
@@ -479,7 +448,6 @@
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
       pollStatus(data.job_id);
     } catch(e) {
       showError(e.message);
@@ -490,12 +458,10 @@
 
   function pollStatus(jobId) {
     if (pollInterval) clearInterval(pollInterval);
-
     pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/status/${jobId}`);
         const job = await res.json();
-
         const pct = Math.round(job.progress || 0);
         document.getElementById('progressBar').style.width = pct + '%';
         document.getElementById('progressPct').textContent = pct + '%';
@@ -511,14 +477,12 @@
           document.getElementById('progressTitle').textContent = '✅ Download complete!';
           document.getElementById('progressPct').textContent = '100%';
           document.getElementById('progressBar').style.width = '100%';
-          document.getElementById('progressStatus').textContent = `File ready: ${job.filename}`;
+          document.getElementById('progressStatus').textContent = `Ready: ${job.filename}`;
           document.getElementById('progressStatus').className = 'progress-status done';
-
           const saveBtn = document.getElementById('saveBtn');
           saveBtn.href = `/api/file/${jobId}`;
           saveBtn.download = job.filename;
           saveBtn.style.display = 'inline-flex';
-
           const btn = document.getElementById('dlBtn');
           btn.disabled = false;
           btn.textContent = 'Download Another';
@@ -529,9 +493,7 @@
           btn.disabled = false;
           btn.textContent = 'Try Again';
         }
-      } catch(e) {
-        // Network hiccup, keep polling
-      }
+      } catch(e) { /* network hiccup */ }
     }, 800);
   }
 
@@ -542,7 +504,6 @@
     document.getElementById('progressCard').classList.add('visible');
   }
 
-  // Allow Enter key
   document.getElementById('urlInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') startDownload();
   });
