@@ -12,6 +12,12 @@ CORS(app)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+def sanitize_filename(name):
+    # Remove special characters that break URLs (#, &, %, etc.)
+    name = re.sub(r'[\\/*?:"<>|#&%=+@!$^{}\[\]()\',;~`]', "_", name)
+    name = re.sub(r'_+', '_', name)
+    return name.strip('_')
+
 # Size limits per platform (in bytes)
 SIZE_LIMITS = {
     "youtube":   1 * 1024 * 1024 * 1024,   # 1 GB
@@ -93,17 +99,22 @@ def run_download(job_id, url, platform):
         if process.returncode == 0:
             files = [f for f in os.listdir(DOWNLOAD_DIR) if f.startswith(job_id)]
             if files:
+                old_path = os.path.join(DOWNLOAD_DIR, files[0])
+                # Sanitize filename to remove URL-breaking characters
+                clean_name = sanitize_filename(files[0])
+                new_path = os.path.join(DOWNLOAD_DIR, clean_name)
+                if old_path != new_path:
+                    os.rename(old_path, new_path)
                 # Double-check actual file size
-                filepath = os.path.join(DOWNLOAD_DIR, files[0])
-                actual_size = os.path.getsize(filepath)
+                actual_size = os.path.getsize(new_path)
                 if actual_size > size_limit:
-                    os.remove(filepath)
+                    os.remove(new_path)
                     jobs[job_id]["status"] = "error"
                     jobs[job_id]["error"] = f"❌ File exceeds the {SIZE_LABELS.get(platform, '500MB')} limit for {platform.title()}."
                     return
                 jobs[job_id]["status"] = "done"
                 jobs[job_id]["progress"] = 100
-                jobs[job_id]["filename"] = files[0]
+                jobs[job_id]["filename"] = clean_name
             else:
                 jobs[job_id]["status"] = "error"
                 jobs[job_id]["error"] = "File not found after download. The video may be too large or unavailable."
