@@ -411,9 +411,8 @@
       border-color: rgba(255,160,60,0.5);
       background: rgba(255,160,60,0.12);
     }
-    .quality-option .q-icon { font-size: 18px; display: block; margin-bottom: 4px; }
-    .quality-option .q-label { font-size: 12px; font-weight: 700; color: var(--text); }
-    .quality-option .q-sub { font-size: 10px; color: var(--subtext); margin-top: 2px; }
+    .quality-option .q-label { font-size: 13px; font-weight: 700; color: var(--text); }
+    .quality-option .q-sub { font-size: 10px; color: var(--subtext); margin-top: 3px; }
 
     /* Check button */
     .btn-check {
@@ -1057,13 +1056,11 @@ function showInfoCard(data) {
   grid.innerHTML = '';
   (data.qualities || []).forEach(q => {
     const isAudio = q.type === 'audio';
-    const icon = isAudio ? '🎵' : q.value === 'best' ? '🏆' : q.label.includes('4K') ? '✨' : q.label.includes('2K') ? '🔷' : '🎬';
-    const sub = isAudio ? 'MP3 · No video' : q.value === 'best' ? 'Highest available' :
-                q.label.includes('1080') ? 'Full HD' : q.label.includes('720') ? 'HD' :
-                q.label.includes('4K') ? 'Ultra HD' : 'SD';
+    // Icon is now embedded in the label from the server
+    const sub = q.sub || (isAudio ? 'MP3 · No video' : 'Video');
     const div = document.createElement('div');
     div.className = 'quality-option' + (isAudio ? ' audio-opt' : '');
-    div.innerHTML = `<span class="q-icon">${icon}</span><div class="q-label">${q.label}</div><div class="q-sub">${sub}</div>`;
+    div.innerHTML = `<div class="q-label">${q.label}</div><div class="q-sub">${sub}</div>`;
     div.onclick = () => startDownload(q.value);
     grid.appendChild(div);
   });

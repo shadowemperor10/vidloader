@@ -222,31 +222,22 @@ def get_info():
         else:
             platform = "other"
 
-        formats = info.get("formats", [])
-        seen_heights = set()
-        qualities = []
-
         if platform == "youtube":
-            for f in formats:
-                h = f.get("height")
-                vcodec = f.get("vcodec", "none")
-                if h and vcodec != "none" and h not in seen_heights:
-                    seen_heights.add(h)
-                    label = f"{h}p"
-                    if h >= 2160:
-                        label = f"4K ({h}p)"
-                    elif h >= 1440:
-                        label = f"2K ({h}p)"
-                    qualities.append({"label": label, "value": f"{h}p", "type": "video"})
-
-            qualities.sort(
-                key=lambda x: int(x["value"].replace("p", "").split("(")[-1].replace("p", "")),
-                reverse=True
-            )
-            qualities.insert(0, {"label": "🏆 Best Quality", "value": "best", "type": "video"})
-            qualities.append({"label": "🎵 Audio Only (MP3)", "value": "audio", "type": "audio"})
+            # Always show the full quality ladder — yt-dlp auto-falls back
+            # to the best available if the exact resolution doesn't exist.
+            qualities = [
+                {"label": "🏆 Best Quality",     "value": "best",  "type": "video", "sub": "Highest available"},
+                {"label": "✨ 4K (2160p)",        "value": "2160p", "type": "video", "sub": "Ultra HD"},
+                {"label": "🔷 2K (1440p)",        "value": "1440p", "type": "video", "sub": "Quad HD"},
+                {"label": "🎬 1080p",             "value": "1080p", "type": "video", "sub": "Full HD"},
+                {"label": "📹 720p",              "value": "720p",  "type": "video", "sub": "HD"},
+                {"label": "📺 480p",              "value": "480p",  "type": "video", "sub": "SD"},
+                {"label": "📱 360p",              "value": "360p",  "type": "video", "sub": "Low"},
+                {"label": "🔻 240p",              "value": "240p",  "type": "video", "sub": "Very Low"},
+                {"label": "🎵 Audio Only (MP3)",  "value": "audio", "type": "audio", "sub": "MP3 · No video"},
+            ]
         else:
-            qualities = [{"label": "🏆 Best Quality", "value": "best", "type": "video"}]
+            qualities = [{"label": "🏆 Best Quality", "value": "best", "type": "video", "sub": "Highest available"}]
 
         return jsonify({
             "title": title,
