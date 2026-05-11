@@ -51,13 +51,16 @@ def yt_dlp_base_args():
     return [
         "yt-dlp",
         "--no-playlist",
-        # Try android client first – most reliable on cloud IPs
-        "--extractor-args", "youtube:player_client=ios,android,web",
-        # Fake a real browser UA
+        # tv_embedded bypasses the "Sign in to confirm" bot check
+        "--extractor-args", "youtube:player_client=tv_embedded,ios,web",
+        # Smart TV user-agent matches tv_embedded client
         "--user-agent",
-        "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 "
+        "(KHTML, like Gecko) Version/6.0 TV Safari/538.1",
         "--no-check-certificates",
+        "--no-warnings",
+        # Small delay to avoid rate-limiting
+        "--sleep-requests", "1",
     ]
 
 
