@@ -4,372 +4,556 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>VidLoader — Download Videos in Max Quality</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #0a0a0f;
-      --surface:  #111118;
-      --card:     #14141e;
-      --border:   rgba(255,255,255,0.07);
-      --border2:  rgba(138,80,255,0.25);
-      --text:     #f0f0f5;
-      --subtext:  #7a7a9a;
-      --accent:   #8a50ff;
-      --accent2:  #c060ff;
-      --glow:     rgba(138,80,255,0.35);
-      --glow2:    rgba(192,96,255,0.2);
-
-      /* 4 unique dark gradients */
-      --grad1: linear-gradient(135deg, #1a0533 0%, #0d1a3a 100%);
-      --grad2: linear-gradient(135deg, #0d0d1a 0%, #1a0d2e 100%);
-      --grad3: linear-gradient(135deg, #0a1628 0%, #1a0a2e 100%);
-      --grad4: linear-gradient(135deg, #0f0a1e 0%, #0a1520 100%);
-
+      --bg: #07070f;
+      --card: #0e0e1a;
+      --border: rgba(255,255,255,0.06);
+      --text: #f0f0f8;
+      --subtext: #606080;
       --radius: 18px;
     }
 
     body {
-      font-family: 'Inter', -apple-system, sans-serif;
+      font-family: 'Inter', sans-serif;
       background: var(--bg);
       min-height: 100vh;
       color: var(--text);
       overflow-x: hidden;
     }
 
-    /* ── Background glow orbs ── */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
-      animation: pulse 8s ease-in-out infinite;
-    }
-    .orb1 {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, rgba(138,80,255,0.12) 0%, transparent 70%);
-      top: -200px; left: -200px;
-      animation-delay: 0s;
-    }
-    .orb2 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(192,96,255,0.08) 0%, transparent 70%);
-      bottom: -150px; right: -150px;
-      animation-delay: 4s;
-    }
-    .orb3 {
-      width: 300px; height: 300px;
-      background: radial-gradient(circle, rgba(80,160,255,0.07) 0%, transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      animation-delay: 2s;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.7; }
-    }
-    .orb2 { animation-name: pulse2; }
-    @keyframes pulse2 {
-      0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.15); opacity: 1; }
+    /* ══════════════════════════════════
+       ANIMATED BACKGROUND MESH
+    ══════════════════════════════════ */
+    #bg-canvas {
+      position: fixed; inset: 0;
+      z-index: 0; pointer-events: none;
     }
 
+    /* ══════════════════════════════════
+       ANIMATED GRADIENT BORDER MIXIN
+    ══════════════════════════════════ */
+    @property --a {
+      syntax: '<angle>';
+      inherits: false;
+      initial-value: 0deg;
+    }
+
+    .glow-border {
+      position: relative;
+      border-radius: var(--radius);
+    }
+    .glow-border::before {
+      content: '';
+      position: absolute;
+      inset: -1.5px;
+      border-radius: calc(var(--radius) + 2px);
+      background: conic-gradient(from var(--a),
+        #8a50ff, #c060ff, #60a0ff, #ff60a0, #8a50ff
+      );
+      animation: spin-border 4s linear infinite;
+      z-index: -1;
+      opacity: 0.7;
+    }
+    @keyframes spin-border {
+      to { --a: 360deg; }
+    }
+
+    /* ══════════════════════════════════
+       CONTAINER
+    ══════════════════════════════════ */
     .container {
       position: relative; z-index: 1;
-      max-width: 820px;
-      margin: 0 auto;
+      max-width: 820px; margin: 0 auto;
       padding: 60px 20px 80px;
     }
 
-    /* ── Header ── */
-    .header { text-align: center; margin-bottom: 48px; }
+    /* ══════════════════════════════════
+       HEADER
+    ══════════════════════════════════ */
+    .header { text-align: center; margin-bottom: 44px; }
 
     .logo {
-      display: inline-flex; align-items: center; gap: 14px; margin-bottom: 16px;
+      display: inline-flex; align-items: center; gap: 14px; margin-bottom: 14px;
     }
     .logo-icon {
-      width: 54px; height: 54px;
-      background: linear-gradient(135deg, #8a50ff, #c060ff);
+      width: 56px; height: 56px;
       border-radius: 16px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 0 30px rgba(138,80,255,0.5), 0 0 60px rgba(138,80,255,0.2);
+      font-size: 28px;
+      background: linear-gradient(135deg, #8a50ff, #c060ff);
+      animation: logo-pulse 3s ease-in-out infinite;
+      position: relative;
     }
-    .logo-text {
-      font-size: 32px; font-weight: 800;
-      background: linear-gradient(135deg, #8a50ff 0%, #c060ff 50%, #60a0ff 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      letter-spacing: -1px;
+    .logo-icon::after {
+      content: '';
+      position: absolute; inset: -4px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #8a50ff, #c060ff, #60a0ff);
+      filter: blur(12px);
+      opacity: 0.6;
+      animation: logo-pulse 3s ease-in-out infinite;
+      z-index: -1;
     }
-    .tagline {
-      font-size: 15px; color: var(--subtext); margin-bottom: 20px; font-weight: 400;
+    @keyframes logo-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
     }
 
-    /* Creator badge */
-    .creator-bar {
-      display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
-      background: var(--card);
-      border: 1px solid var(--border2);
-      border-radius: 99px;
-      padding: 8px 20px;
-      font-size: 13px; color: var(--subtext);
-      box-shadow: 0 0 20px rgba(138,80,255,0.1);
+    .logo-text {
+      font-size: 34px; font-weight: 900;
+      background: linear-gradient(90deg, #8a50ff, #c060ff, #60a0ff, #ff60c0, #8a50ff);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: text-flow 4s linear infinite;
+      letter-spacing: -1.5px;
     }
-    .creator-bar span { font-weight: 600; color: var(--text); }
-    .creator-links { display: flex; gap: 8px; }
+    @keyframes text-flow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 300% 50%; }
+    }
+
+    .tagline {
+      font-size: 14px; color: var(--subtext); margin-bottom: 22px;
+      animation: fade-in 1s ease both;
+    }
+
+    /* ── Creator badge ── */
+    .creator-bar {
+      display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      justify-content: center;
+      background: var(--card);
+      border-radius: 99px; padding: 9px 20px;
+      font-size: 13px; color: var(--subtext);
+      position: relative; overflow: hidden;
+    }
+    .creator-bar::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg,
+        transparent 0%, rgba(138,80,255,0.15) 25%,
+        rgba(192,96,255,0.15) 50%, rgba(96,160,255,0.15) 75%, transparent 100%
+      );
+      background-size: 200% 100%;
+      animation: sweep 3s linear infinite;
+      border-radius: 99px;
+    }
+    @keyframes sweep {
+      0% { background-position: -100% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .creator-bar span { font-weight: 700; color: var(--text); position: relative; z-index: 1; }
+    .creator-links { display: flex; gap: 8px; position: relative; z-index: 1; }
     .creator-links a {
       display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 13px; border-radius: 99px;
+      padding: 5px 14px; border-radius: 99px;
       font-size: 12px; font-weight: 600; text-decoration: none;
-      transition: transform 0.18s, box-shadow 0.18s;
+      transition: transform 0.2s, box-shadow 0.2s;
       border: 1px solid transparent;
     }
-    .creator-links a:hover { transform: translateY(-2px); }
-    .link-yt  { background: rgba(255,60,60,0.15);  color: #ff6060; border-color: rgba(255,60,60,0.3);  }
-    .link-tt  { background: rgba(255,255,255,0.07); color: #e0e0e0; border-color: rgba(255,255,255,0.15); }
-    .link-ig  { background: rgba(220,60,130,0.15);  color: #ff70b0; border-color: rgba(220,60,130,0.3); }
-    .link-yt:hover  { box-shadow: 0 0 16px rgba(255,60,60,0.3); }
-    .link-tt:hover  { box-shadow: 0 0 16px rgba(255,255,255,0.1); }
-    .link-ig:hover  { box-shadow: 0 0 16px rgba(220,60,130,0.3); }
+    .creator-links a:hover { transform: translateY(-2px) scale(1.05); }
+    .link-yt  { background: rgba(255,60,60,0.12);  color: #ff7070; border-color: rgba(255,60,60,0.25); }
+    .link-tt  { background: rgba(200,200,255,0.08); color: #c0c0e0; border-color: rgba(200,200,255,0.15); }
+    .link-ig  { background: rgba(220,60,130,0.12);  color: #ff80c0; border-color: rgba(220,60,130,0.25); }
+    .link-yt:hover  { box-shadow: 0 0 20px rgba(255,60,60,0.4); }
+    .link-tt:hover  { box-shadow: 0 0 20px rgba(200,200,255,0.2); }
+    .link-ig:hover  { box-shadow: 0 0 20px rgba(220,60,130,0.4); }
 
-    /* ── Limits Banner ── */
+    /* ══════════════════════════════════
+       LIMITS BANNER
+    ══════════════════════════════════ */
     .limits-bar {
       display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
-      margin-bottom: 32px;
+      margin-bottom: 28px;
     }
     .limit-pill {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 7px 16px; border-radius: 99px;
-      font-size: 12px; font-weight: 600;
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--subtext);
+      font-size: 12px; font-weight: 600; color: var(--subtext);
+      border: 1px solid rgba(255,255,255,0.07);
+      position: relative; overflow: hidden;
+      transition: transform 0.2s;
     }
+    .limit-pill:hover { transform: scale(1.05); }
     .limit-pill strong { color: var(--text); }
-    .limit-pill.yt  { background: linear-gradient(135deg, rgba(255,60,60,0.12), rgba(138,80,255,0.12)); border-color: rgba(255,60,60,0.2); }
-    .limit-pill.tt  { background: linear-gradient(135deg, rgba(138,80,255,0.12), rgba(60,60,255,0.12)); border-color: rgba(138,80,255,0.2); }
-    .limit-pill.ig  { background: linear-gradient(135deg, rgba(220,60,130,0.12), rgba(255,120,60,0.12)); border-color: rgba(220,60,130,0.2); }
+    .limit-pill::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+      transform: translateX(-100%);
+      animation: pill-shine 3s ease infinite;
+    }
+    .limit-pill:nth-child(1)::after { animation-delay: 0s; }
+    .limit-pill:nth-child(2)::after { animation-delay: 1s; }
+    .limit-pill:nth-child(3)::after { animation-delay: 2s; }
+    @keyframes pill-shine {
+      0% { transform: translateX(-100%); }
+      40%, 100% { transform: translateX(100%); }
+    }
+    .limit-pill.yt { background: linear-gradient(135deg, rgba(255,60,60,0.1), rgba(138,80,255,0.1)); border-color: rgba(255,60,60,0.18); }
+    .limit-pill.tt { background: linear-gradient(135deg, rgba(138,80,255,0.1), rgba(60,100,255,0.1)); border-color: rgba(138,80,255,0.18); }
+    .limit-pill.ig { background: linear-gradient(135deg, rgba(220,60,130,0.1), rgba(255,100,60,0.1)); border-color: rgba(220,60,130,0.18); }
 
-    /* ── Platform Cards ── */
+    /* ══════════════════════════════════
+       PLATFORM CARDS
+    ══════════════════════════════════ */
     .platforms {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 14px; margin-bottom: 28px;
+      gap: 14px; margin-bottom: 26px;
     }
     .platform-card {
-      padding: 24px 18px; border-radius: var(--radius);
-      border: 1px solid var(--border);
+      padding: 26px 18px; border-radius: var(--radius);
       text-align: center; cursor: pointer;
-      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
       position: relative; overflow: hidden;
+      transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.25s;
     }
+    /* Animated gradient top border */
+    .platform-card::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--pc), transparent);
+      animation: card-top 3s ease-in-out infinite;
+    }
+    /* Glow overlay on hover */
     .platform-card::after {
       content: '';
       position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(138,80,255,0.05), transparent);
-      opacity: 0; transition: opacity 0.22s;
+      background: radial-gradient(circle at 50% 0%, var(--pc-glow) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
     }
-    .platform-card:hover { transform: translateY(-5px); border-color: var(--border2); }
+    @keyframes card-top {
+      0%   { left: -100%; }
+      50%  { left: 100%; }
+      100% { left: 100%; }
+    }
+    .platform-card:hover { transform: translateY(-6px) scale(1.02); }
     .platform-card:hover::after { opacity: 1; }
 
-    .platform-card.youtube   { background: var(--grad1); }
-    .platform-card.tiktok    { background: var(--grad2); }
-    .platform-card.instagram { background: var(--grad3); }
-    .platform-card.all       { background: var(--grad4); }
+    .platform-card.youtube   { --pc: #ff6060; --pc-glow: rgba(255,60,60,0.08);
+      background: linear-gradient(160deg, #180a0a 0%, #0e0e1a 100%); }
+    .platform-card.tiktok    { --pc: #c060ff; --pc-glow: rgba(138,80,255,0.1);
+      background: linear-gradient(160deg, #0e0818 0%, #0e0e1a 100%); }
+    .platform-card.instagram { --pc: #ff70b0; --pc-glow: rgba(220,60,130,0.08);
+      background: linear-gradient(160deg, #180810 0%, #0e0e1a 100%); }
+    .platform-card.all       { --pc: #60a0ff; --pc-glow: rgba(60,160,255,0.08);
+      background: linear-gradient(160deg, #080e18 0%, #0e0e1a 100%); }
 
-    .platform-card.youtube:hover   { box-shadow: 0 8px 32px rgba(255,60,60,0.2), 0 0 0 1px rgba(255,60,60,0.2); }
-    .platform-card.tiktok:hover    { box-shadow: 0 8px 32px rgba(138,80,255,0.25), 0 0 0 1px rgba(138,80,255,0.25); }
-    .platform-card.instagram:hover { box-shadow: 0 8px 32px rgba(220,60,130,0.2), 0 0 0 1px rgba(220,60,130,0.2); }
-    .platform-card.all:hover       { box-shadow: 0 8px 32px rgba(60,160,255,0.2), 0 0 0 1px rgba(60,160,255,0.2); }
+    .platform-card.youtube:hover   { box-shadow: 0 12px 40px rgba(255,60,60,0.2), 0 0 0 1px rgba(255,60,60,0.15); }
+    .platform-card.tiktok:hover    { box-shadow: 0 12px 40px rgba(138,80,255,0.25), 0 0 0 1px rgba(138,80,255,0.2); }
+    .platform-card.instagram:hover { box-shadow: 0 12px 40px rgba(220,60,130,0.2), 0 0 0 1px rgba(220,60,130,0.15); }
+    .platform-card.all:hover       { box-shadow: 0 12px 40px rgba(60,160,255,0.2), 0 0 0 1px rgba(60,160,255,0.15); }
 
-    .platform-card .p-icon  { font-size: 32px; margin-bottom: 10px; display: block; }
-    .platform-card .p-name  { font-size: 14px; font-weight: 700; color: var(--text); }
-    .platform-card .p-desc  { font-size: 11px; color: var(--subtext); margin-top: 4px; }
+    .platform-card .p-icon {
+      font-size: 32px; display: block; margin-bottom: 10px;
+      animation: float-icon 4s ease-in-out infinite;
+      position: relative; z-index: 1;
+    }
+    .platform-card:nth-child(2) .p-icon { animation-delay: 0.5s; }
+    .platform-card:nth-child(3) .p-icon { animation-delay: 1s; }
+    .platform-card:nth-child(4) .p-icon { animation-delay: 1.5s; }
+    @keyframes float-icon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    .platform-card .p-name  { font-size: 14px; font-weight: 700; color: var(--text); position: relative; z-index: 1; }
+    .platform-card .p-desc  { font-size: 11px; color: var(--subtext); margin-top: 5px; position: relative; z-index: 1; }
     .platform-card .p-limit {
       margin-top: 10px; display: inline-block;
-      padding: 3px 10px; background: rgba(138,80,255,0.15);
-      border: 1px solid rgba(138,80,255,0.3);
-      border-radius: 99px; font-size: 11px; font-weight: 700; color: #c090ff;
+      padding: 3px 10px;
+      background: rgba(138,80,255,0.12);
+      border: 1px solid rgba(138,80,255,0.25);
+      border-radius: 99px; font-size: 11px; font-weight: 700;
+      color: #b080ff; position: relative; z-index: 1;
     }
 
-    /* ── Input Card ── */
+    /* ══════════════════════════════════
+       INPUT CARD
+    ══════════════════════════════════ */
     .input-card {
       background: var(--card);
-      border: 1px solid var(--border2);
       border-radius: var(--radius);
       padding: 32px 28px;
-      box-shadow: 0 0 40px rgba(138,80,255,0.08);
-      margin-bottom: 24px;
+      margin-bottom: 22px;
+      position: relative; overflow: hidden;
+      /* Animated border */
+      border: 1px solid transparent;
+      background-clip: padding-box;
+    }
+    .input-card-wrap {
+      position: relative;
+      border-radius: calc(var(--radius) + 1px);
+      padding: 1.5px;
+      background: linear-gradient(var(--a, 0deg), #8a50ff, #c060ff, #60a0ff, #ff60c0, #8a50ff);
+      animation: spin-grad 5s linear infinite;
+      margin-bottom: 22px;
+    }
+    @keyframes spin-grad {
+      to { filter: hue-rotate(360deg); }
+    }
+    .input-inner {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 32px 28px;
       position: relative; overflow: hidden;
     }
-    .input-card::before {
+    /* Shimmer scan line */
+    .input-inner::after {
       content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(138,80,255,0.6), transparent);
+      position: absolute;
+      top: 0; left: -100%; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(138,80,255,0.06), transparent);
+      animation: scan 4s ease-in-out infinite;
     }
+    @keyframes scan {
+      0% { left: -60%; }
+      100% { left: 120%; }
+    }
+
     .input-label {
       font-size: 11px; font-weight: 700; color: var(--subtext);
       letter-spacing: 1.2px; text-transform: uppercase;
-      margin-bottom: 14px; display: block;
+      margin-bottom: 14px; display: block; position: relative; z-index: 1;
     }
-    .input-row { display: flex; gap: 10px; align-items: stretch; }
+    .input-row { display: flex; gap: 10px; position: relative; z-index: 1; }
     .url-input {
-      flex: 1; padding: 15px 18px;
-      border-radius: 12px;
+      flex: 1; padding: 15px 18px; border-radius: 12px;
       border: 1px solid rgba(138,80,255,0.2);
-      background: rgba(138,80,255,0.06);
+      background: rgba(138,80,255,0.05);
       font-size: 14px; font-family: inherit; color: var(--text);
-      outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
     }
     .url-input:focus {
-      border-color: var(--accent);
+      border-color: #8a50ff;
       background: rgba(138,80,255,0.1);
-      box-shadow: 0 0 0 3px rgba(138,80,255,0.15);
+      box-shadow: 0 0 0 3px rgba(138,80,255,0.15), 0 0 20px rgba(138,80,255,0.1);
     }
-    .url-input::placeholder { color: #3a3a5a; }
+    .url-input::placeholder { color: #2a2a4a; }
 
     .btn-download {
       padding: 15px 26px; border-radius: 12px; border: none;
-      background: linear-gradient(135deg, #8a50ff, #c060ff);
-      color: #fff; font-size: 14px; font-weight: 700; font-family: inherit;
-      cursor: pointer; white-space: nowrap;
-      transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
-      box-shadow: 0 0 24px rgba(138,80,255,0.5);
-      letter-spacing: 0.3px;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      cursor: pointer; white-space: nowrap; color: #fff;
+      background: linear-gradient(135deg, #8a50ff 0%, #c060ff 50%, #8a50ff 100%);
+      background-size: 200% 100%;
+      animation: btn-shift 3s ease infinite;
+      box-shadow: 0 0 24px rgba(138,80,255,0.5), 0 0 60px rgba(138,80,255,0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative; overflow: hidden;
     }
-    .btn-download:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(138,80,255,0.7); }
-    .btn-download:active { transform: translateY(0); }
-    .btn-download:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-download::after {
+      content: '';
+      position: absolute; top: -50%; left: -60%; width: 30%; height: 200%;
+      background: rgba(255,255,255,0.15);
+      transform: skewX(-20deg);
+      animation: btn-shine 3s ease-in-out infinite;
+    }
+    @keyframes btn-shift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    @keyframes btn-shine {
+      0% { left: -60%; }
+      100% { left: 120%; }
+    }
+    .btn-download:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 36px rgba(138,80,255,0.7), 0 0 80px rgba(138,80,255,0.2);
+    }
+    .btn-download:disabled { opacity: 0.4; cursor: not-allowed; transform: none; animation: none; }
 
-    /* ── Progress Card ── */
+    /* ══════════════════════════════════
+       PROGRESS CARD
+    ══════════════════════════════════ */
     .progress-card {
-      background: var(--card);
-      border: 1px solid var(--border2);
-      border-radius: var(--radius);
-      padding: 26px 28px;
-      box-shadow: 0 0 40px rgba(138,80,255,0.08);
-      margin-bottom: 24px;
+      background: var(--card); border-radius: var(--radius);
+      padding: 26px 28px; margin-bottom: 22px;
       display: none; position: relative; overflow: hidden;
+      border: 1px solid rgba(138,80,255,0.2);
+    }
+    .progress-card.visible { display: block; animation: slide-in 0.3s ease; }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .progress-card::before {
       content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(138,80,255,0.6), transparent);
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #8a50ff, #c060ff, #60a0ff, #ff60c0);
+      background-size: 200% 100%;
+      animation: bar-flow 2s linear infinite;
     }
-    .progress-card.visible { display: block; }
+    @keyframes bar-flow {
+      0% { background-position: 0% 0; }
+      100% { background-position: 200% 0; }
+    }
     .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .progress-title { font-size: 14px; font-weight: 600; color: var(--text); }
     .progress-pct {
       font-size: 13px; font-weight: 800;
-      background: linear-gradient(135deg, #8a50ff, #c060ff);
+      background: linear-gradient(90deg, #8a50ff, #c060ff);
+      background-size: 200%;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: text-flow 2s linear infinite;
     }
     .progress-bar-track {
-      height: 6px; border-radius: 99px;
+      height: 7px; border-radius: 99px;
       background: rgba(138,80,255,0.1);
       overflow: hidden; margin-bottom: 12px;
     }
     .progress-bar-fill {
       height: 100%; border-radius: 99px;
-      background: linear-gradient(90deg, #8a50ff, #c060ff, #60a0ff);
-      background-size: 200% 100%;
-      transition: width 0.4s ease;
+      background: linear-gradient(90deg, #8a50ff, #c060ff, #60a0ff, #ff60c0, #8a50ff);
+      background-size: 300% 100%;
+      animation: bar-shine 2s linear infinite;
+      transition: width 0.5s ease;
       width: 0%;
-      animation: shimmer 2s linear infinite;
     }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+    @keyframes bar-shine {
+      0% { background-position: 0% 0; }
+      100% { background-position: 300% 0; }
     }
     .progress-status { font-size: 12px; color: var(--subtext); word-break: break-all; }
     .progress-status.error { color: #ff5060; }
-    .progress-status.done  { color: #50d080; font-weight: 600; }
+    .progress-status.done  {
+      color: #40d080; font-weight: 700;
+      text-shadow: 0 0 10px rgba(64,208,128,0.4);
+    }
 
     .btn-save {
       margin-top: 16px;
       display: inline-flex; align-items: center; gap: 8px;
       padding: 12px 24px; border-radius: 12px; border: none;
-      background: linear-gradient(135deg, #20c060, #10a040);
+      background: linear-gradient(135deg, #20c060, #10a040, #20c060);
+      background-size: 200% 100%;
+      animation: btn-shift 3s ease infinite;
       color: #fff; font-size: 14px; font-weight: 700; font-family: inherit;
       cursor: pointer; text-decoration: none;
-      transition: transform 0.18s, box-shadow 0.18s;
       box-shadow: 0 0 24px rgba(32,192,96,0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .btn-save:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(32,192,96,0.6); }
+    .btn-save:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(32,192,96,0.6); }
 
-    /* ── How it works ── */
-    .how-section { margin-top: 16px; }
+    /* ══════════════════════════════════
+       DIVIDER
+    ══════════════════════════════════ */
+    .divider {
+      height: 1px; margin: 28px 0;
+      background: linear-gradient(90deg, transparent, rgba(138,80,255,0.4), rgba(192,96,255,0.4), transparent);
+      background-size: 200% 100%;
+      animation: div-flow 4s linear infinite;
+    }
+    @keyframes div-flow {
+      0% { background-position: 0% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* ══════════════════════════════════
+       HOW IT WORKS
+    ══════════════════════════════════ */
     .section-title {
-      font-size: 16px; font-weight: 700; text-align: center;
-      margin-bottom: 16px; color: var(--subtext); letter-spacing: 1px;
-      text-transform: uppercase;
+      font-size: 11px; font-weight: 700; text-align: center;
+      margin-bottom: 16px; color: var(--subtext);
+      letter-spacing: 2px; text-transform: uppercase;
     }
     .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
     .step-card {
       padding: 22px 18px; border-radius: var(--radius);
-      border: 1px solid var(--border);
-      text-align: center;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      border: 1px solid rgba(255,255,255,0.06);
+      text-align: center; position: relative; overflow: hidden;
+      transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), border-color 0.25s;
     }
-    .step-card:hover { border-color: var(--border2); box-shadow: 0 0 20px rgba(138,80,255,0.1); }
-    .step-card:nth-child(1) { background: var(--grad4); }
-    .step-card:nth-child(2) { background: var(--grad1); }
-    .step-card:nth-child(3) { background: var(--grad2); }
-    .step-card:nth-child(4) { background: var(--grad3); }
+    .step-card:hover { transform: translateY(-5px); border-color: rgba(138,80,255,0.3); }
+    .step-card::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(138,80,255,0.8), transparent);
+      animation: card-top 3s ease-in-out infinite;
+    }
+    .step-card:nth-child(1) { background: linear-gradient(160deg, #080e18 0%, #0e0e1a 100%); }
+    .step-card:nth-child(2) { background: linear-gradient(160deg, #0d0818 0%, #0e0e1a 100%); }
+    .step-card:nth-child(3) { background: linear-gradient(160deg, #0e0818 0%, #0e0e1a 100%); }
+    .step-card:nth-child(4) { background: linear-gradient(160deg, #080c18 0%, #0e0e1a 100%); }
+    .step-card:nth-child(1)::before { animation-delay: 0s; }
+    .step-card:nth-child(2)::before { animation-delay: 0.75s; }
+    .step-card:nth-child(3)::before { animation-delay: 1.5s; }
+    .step-card:nth-child(4)::before { animation-delay: 2.25s; }
     .step-num {
-      width: 34px; height: 34px;
-      background: rgba(138,80,255,0.15);
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(138,80,255,0.12);
       border: 1px solid rgba(138,80,255,0.3);
-      border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 14px; font-weight: 800; color: #c090ff;
       margin: 0 auto 12px;
+      animation: num-glow 3s ease-in-out infinite;
+    }
+    .step-card:nth-child(2) .step-num { animation-delay: 0.75s; }
+    .step-card:nth-child(3) .step-num { animation-delay: 1.5s; }
+    .step-card:nth-child(4) .step-num { animation-delay: 2.25s; }
+    @keyframes num-glow {
+      0%, 100% { box-shadow: 0 0 8px rgba(138,80,255,0.3); }
+      50% { box-shadow: 0 0 20px rgba(192,96,255,0.6); }
     }
     .step-card h4 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .step-card p  { font-size: 11px; color: var(--subtext); line-height: 1.6; }
+    .step-card p  { font-size: 11px; color: var(--subtext); line-height: 1.7; }
 
-    /* ── Footer ── */
+    /* ══════════════════════════════════
+       FOOTER
+    ══════════════════════════════════ */
     .footer {
       text-align: center; margin-top: 56px; padding-top: 28px;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid rgba(255,255,255,0.05);
       font-size: 12px; color: var(--subtext);
     }
-    .footer a { color: #8a50ff; text-decoration: none; font-weight: 500; }
-    .footer a:hover { color: #c060ff; }
-    .made-by { margin-top: 8px; font-size: 11px; color: #3a3a5a; }
-    .made-by strong { color: #8a50ff; }
-
-    /* Divider */
-    .divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(138,80,255,0.3), transparent);
-      margin: 28px 0;
+    .footer a {
+      color: #8a50ff; text-decoration: none; font-weight: 600;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+    .footer a:hover { color: #c060ff; text-shadow: 0 0 10px rgba(192,96,255,0.5); }
+    .made-by { margin-top: 8px; font-size: 11px; color: #2a2a4a; }
+    .made-by strong {
+      background: linear-gradient(90deg, #8a50ff, #c060ff, #60a0ff);
+      background-size: 200%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      animation: text-flow 4s linear infinite;
+      font-weight: 800;
     }
 
-    /* Spinner */
+    /* ══════════════════════════════════
+       SPINNER
+    ══════════════════════════════════ */
     .spinner {
       display: inline-block; width: 14px; height: 14px;
       border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
-      border-radius: 50%; animation: spin 0.7s linear infinite;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
       vertical-align: middle; margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
     @media(max-width: 600px) {
       .input-row { flex-direction: column; }
-      .input-card { padding: 22px 18px; }
-      .container { padding: 40px 14px 60px; }
-      .creator-bar { border-radius: 18px; padding: 12px 16px; }
+      .input-inner { padding: 22px 16px; }
+      .container { padding: 40px 12px 60px; }
+      .creator-bar { border-radius: 18px; }
       .creator-links { flex-wrap: wrap; justify-content: center; }
     }
   </style>
 </head>
 <body>
 
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-<div class="orb orb3"></div>
+<!-- Animated particle background -->
+<canvas id="bg-canvas"></canvas>
 
 <div class="container">
 
@@ -380,8 +564,7 @@
       <span class="logo-text">VidLoader</span>
     </div>
     <p class="tagline">Download YouTube, TikTok & Instagram videos in maximum quality.</p>
-
-    <div style="display:flex; justify-content:center; margin-top:16px;">
+    <div style="display:flex;justify-content:center;margin-top:14px;">
       <div class="creator-bar">
         <span>Created by <span>k1llez</span></span>
         <div class="creator-links">
@@ -393,7 +576,7 @@
     </div>
   </div>
 
-  <!-- Size Limits -->
+  <!-- Limits -->
   <div class="limits-bar">
     <div class="limit-pill yt">▶️ YouTube &nbsp;<strong>Max 1 GB</strong></div>
     <div class="limit-pill tt">🎵 TikTok &nbsp;<strong>Max 500 MB</strong></div>
@@ -429,17 +612,15 @@
   </div>
 
   <!-- Input -->
-  <div class="input-card">
-    <span class="input-label">Paste your video link</span>
-    <div class="input-row">
-      <input
-        type="url" id="urlInput" class="url-input"
-        placeholder="https://www.youtube.com/watch?v=..."
-        autocomplete="off" spellcheck="false"
-      />
-      <button class="btn-download" id="dlBtn" onclick="startDownload()">
-        Download
-      </button>
+  <div class="input-card-wrap">
+    <div class="input-inner">
+      <span class="input-label">Paste your video link</span>
+      <div class="input-row">
+        <input type="url" id="urlInput" class="url-input"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autocomplete="off" spellcheck="false"/>
+        <button class="btn-download" id="dlBtn" onclick="startDownload()">Download</button>
+      </div>
     </div>
   </div>
 
@@ -453,15 +634,13 @@
       <div class="progress-bar-fill" id="progressBar"></div>
     </div>
     <div class="progress-status" id="progressStatus">Starting up…</div>
-    <a class="btn-save" id="saveBtn" style="display:none" href="#" download>
-      ⬇️ &nbsp;Save File
-    </a>
+    <a class="btn-save" id="saveBtn" style="display:none" href="#" download>⬇️ &nbsp;Save File</a>
   </div>
 
   <div class="divider"></div>
 
   <!-- How it works -->
-  <div class="how-section">
+  <div>
     <div class="section-title">How it works</div>
     <div class="steps">
       <div class="step-card">
@@ -491,113 +670,219 @@
   <div class="footer">
     <p>For personal use only. Respect copyright laws & platform terms of service.</p>
     <p class="made-by">Made with ❤️ by <strong>k1llez</strong> &nbsp;·&nbsp;
-      <a href="https://youtube.com/@killeztt?si=Q_OrL8btKVvhpmrW" target="_blank">YouTube</a> &nbsp;·&nbsp;
-      <a href="https://www.tiktok.com/@k1llez.tt" target="_blank">TikTok</a> &nbsp;·&nbsp;
+      <a href="https://youtube.com/@killeztt?si=Q_OrL8btKVvhpmrW" target="_blank">YouTube</a> ·
+      <a href="https://www.tiktok.com/@k1llez.tt" target="_blank">TikTok</a> ·
       <a href="https://www.instagram.com/k1llez.tt?igsh=MW1xN3prazRteXpxZg==" target="_blank">Instagram</a>
     </p>
   </div>
-
 </div>
 
 <script>
-  const placeholders = {
-    youtube:   'https://www.youtube.com/watch?v=...',
-    tiktok:    'https://www.tiktok.com/@k1llez.tt/video/...',
-    instagram: 'https://www.instagram.com/reel/...',
-    other:     'https://twitter.com/user/status/...'
-  };
+/* ══════════════════════
+   PARTICLE BACKGROUND
+══════════════════════ */
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], connections = [];
 
-  function setPlaceholder(p) {
-    document.getElementById('urlInput').placeholder = placeholders[p];
-    document.getElementById('urlInput').focus();
+  const COLORS = ['#8a50ff','#c060ff','#60a0ff','#ff60c0','#50d0ff'];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
   }
 
-  let pollInterval = null;
+  function randColor() { return COLORS[Math.floor(Math.random() * COLORS.length)]; }
 
-  async function startDownload() {
-    const url = document.getElementById('urlInput').value.trim();
-    if (!url) { alert('Please paste a video URL first!'); return; }
-
-    const btn = document.getElementById('dlBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Starting…';
-
-    const card = document.getElementById('progressCard');
-    card.classList.add('visible');
-    document.getElementById('progressTitle').textContent = 'Preparing download…';
-    document.getElementById('progressPct').textContent = '0%';
-    document.getElementById('progressBar').style.width = '0%';
-    document.getElementById('progressStatus').textContent = 'Contacting server…';
-    document.getElementById('progressStatus').className = 'progress-status';
-    document.getElementById('saveBtn').style.display = 'none';
-
-    try {
-      const res = await fetch('/api/download', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({url})
+  function initParticles() {
+    particles = [];
+    const count = Math.floor((W * H) / 18000);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 1.5 + 0.5,
+        color: randColor(),
+        alpha: Math.random() * 0.5 + 0.2,
+        pulse: Math.random() * Math.PI * 2,
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      pollStatus(data.job_id);
-    } catch(e) {
-      showError(e.message);
-      btn.disabled = false;
-      btn.textContent = 'Download';
     }
   }
 
-  function pollStatus(jobId) {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/status/${jobId}`);
-        const job = await res.json();
-        const pct = Math.round(job.progress || 0);
-        document.getElementById('progressBar').style.width = pct + '%';
-        document.getElementById('progressPct').textContent = pct + '%';
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
 
-        if (job.status === 'queued') {
-          document.getElementById('progressStatus').textContent = '⏳ Queued…';
-          document.getElementById('progressTitle').textContent = 'Waiting to start…';
-        } else if (job.status === 'downloading') {
-          document.getElementById('progressTitle').textContent = 'Downloading in max quality…';
-          document.getElementById('progressStatus').textContent = job.log || 'Fetching video…';
-        } else if (job.status === 'done') {
-          clearInterval(pollInterval);
-          document.getElementById('progressTitle').textContent = '✅ Download complete!';
-          document.getElementById('progressPct').textContent = '100%';
-          document.getElementById('progressBar').style.width = '100%';
-          document.getElementById('progressStatus').textContent = `Ready: ${job.filename}`;
-          document.getElementById('progressStatus').className = 'progress-status done';
-          const saveBtn = document.getElementById('saveBtn');
-          saveBtn.href = `/api/file/${jobId}`;
-          saveBtn.download = job.filename;
-          saveBtn.style.display = 'inline-flex';
-          const btn = document.getElementById('dlBtn');
-          btn.disabled = false;
-          btn.textContent = 'Download Another';
-        } else if (job.status === 'error') {
-          clearInterval(pollInterval);
-          showError(job.error || 'Something went wrong.');
-          const btn = document.getElementById('dlBtn');
-          btn.disabled = false;
-          btn.textContent = 'Try Again';
+    // Moving glow orbs in background
+    const t = Date.now() * 0.001;
+    const orbs = [
+      { x: W * 0.2 + Math.sin(t * 0.3) * 80,  y: H * 0.25 + Math.cos(t * 0.2) * 60,  r: 300, color: 'rgba(138,80,255,' },
+      { x: W * 0.8 + Math.cos(t * 0.25) * 100, y: H * 0.7 + Math.sin(t * 0.35) * 80,  r: 250, color: 'rgba(192,96,255,' },
+      { x: W * 0.5 + Math.sin(t * 0.4) * 120,  y: H * 0.5 + Math.cos(t * 0.15) * 100, r: 200, color: 'rgba(96,160,255,' },
+    ];
+    orbs.forEach(o => {
+      const g = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
+      g.addColorStop(0, o.color + '0.08)');
+      g.addColorStop(1, o.color + '0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Particles
+    particles.forEach(p => {
+      p.pulse += 0.02;
+      const alpha = p.alpha * (0.7 + 0.3 * Math.sin(p.pulse));
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba').replace('##','#');
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = p.color;
+
+      // Simpler: just set globalAlpha
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+
+      // Connect nearby
+      particles.forEach(p2 => {
+        const dx = p.x - p2.x, dy = p.y - p2.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 100 && dist > 0) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = p.color;
+          ctx.globalAlpha = (1 - dist/100) * 0.12;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
         }
-      } catch(e) {}
-    }, 800);
+      });
+
+      // Move
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W;
+      if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H;
+      if (p.y > H) p.y = 0;
+    });
+
+    requestAnimationFrame(draw);
   }
 
-  function showError(msg) {
-    document.getElementById('progressTitle').textContent = '❌ Download failed';
-    document.getElementById('progressStatus').textContent = msg;
-    document.getElementById('progressStatus').className = 'progress-status error';
-    document.getElementById('progressCard').classList.add('visible');
-  }
+  resize();
+  initParticles();
+  draw();
+  window.addEventListener('resize', () => { resize(); initParticles(); });
+})();
 
-  document.getElementById('urlInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') startDownload();
-  });
+/* ══════════════════════
+   APP LOGIC
+══════════════════════ */
+const placeholders = {
+  youtube:   'https://www.youtube.com/watch?v=...',
+  tiktok:    'https://www.tiktok.com/@k1llez.tt/video/...',
+  instagram: 'https://www.instagram.com/reel/...',
+  other:     'https://twitter.com/user/status/...'
+};
+
+function setPlaceholder(p) {
+  document.getElementById('urlInput').placeholder = placeholders[p];
+  document.getElementById('urlInput').focus();
+}
+
+let pollInterval = null;
+
+async function startDownload() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { alert('Please paste a video URL first!'); return; }
+
+  const btn = document.getElementById('dlBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Starting…';
+
+  const card = document.getElementById('progressCard');
+  card.classList.add('visible');
+  document.getElementById('progressTitle').textContent = 'Preparing download…';
+  document.getElementById('progressPct').textContent = '0%';
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('progressStatus').textContent = 'Contacting server…';
+  document.getElementById('progressStatus').className = 'progress-status';
+  document.getElementById('saveBtn').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/download', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    pollStatus(data.job_id);
+  } catch(e) {
+    showError(e.message);
+    btn.disabled = false;
+    btn.textContent = 'Download';
+  }
+}
+
+function pollStatus(jobId) {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/status/${jobId}`);
+      const job = await res.json();
+      const pct = Math.round(job.progress || 0);
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressPct').textContent = pct + '%';
+
+      if (job.status === 'queued') {
+        document.getElementById('progressStatus').textContent = '⏳ Queued…';
+        document.getElementById('progressTitle').textContent = 'Waiting to start…';
+      } else if (job.status === 'downloading') {
+        document.getElementById('progressTitle').textContent = 'Downloading in max quality…';
+        document.getElementById('progressStatus').textContent = job.log || 'Fetching video…';
+      } else if (job.status === 'done') {
+        clearInterval(pollInterval);
+        document.getElementById('progressTitle').textContent = '✅ Download complete!';
+        document.getElementById('progressPct').textContent = '100%';
+        document.getElementById('progressBar').style.width = '100%';
+        document.getElementById('progressStatus').textContent = `Ready: ${job.filename}`;
+        document.getElementById('progressStatus').className = 'progress-status done';
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.href = `/api/file/${jobId}`;
+        saveBtn.download = job.filename;
+        saveBtn.style.display = 'inline-flex';
+        const btn = document.getElementById('dlBtn');
+        btn.disabled = false;
+        btn.textContent = 'Download Another';
+      } else if (job.status === 'error') {
+        clearInterval(pollInterval);
+        showError(job.error || 'Something went wrong.');
+        const btn = document.getElementById('dlBtn');
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+      }
+    } catch(e) {}
+  }, 800);
+}
+
+function showError(msg) {
+  document.getElementById('progressTitle').textContent = '❌ Download failed';
+  document.getElementById('progressStatus').textContent = msg;
+  document.getElementById('progressStatus').className = 'progress-status error';
+  document.getElementById('progressCard').classList.add('visible');
+}
+
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startDownload();
+});
 </script>
 </body>
 </html>
