@@ -87,9 +87,14 @@ def run_download(job_id, url, platform, quality="best"):
             yt_dlp_args.remove("mp4")
             yt_dlp_args += ["-f", "bestaudio", "-x", "--audio-format", "mp3"]
         else:
-            # e.g. "1080p" → height<=1080
+            # e.g. "1080p" → exact height match, then fallback to best below it
             h = quality.replace("p", "")
-            yt_dlp_args += ["-f", f"bestvideo[height<={h}]+bestaudio/best[height<={h}]"]
+            yt_dlp_args += [
+                "-f",
+                f"bestvideo[height={h}]+bestaudio"
+                f"/bestvideo[height<={h}]+bestaudio"
+                f"/bestvideo+bestaudio/best"
+            ]
     else:
         yt_dlp_args += ["-f", "best"]
 
@@ -223,19 +228,34 @@ def get_info():
             platform = "other"
 
         if platform == "youtube":
-            # Always show the full quality ladder — yt-dlp auto-falls back
-            # to the best available if the exact resolution doesn't exist.
-            qualities = [
-                {"label": "🏆 Best Quality",     "value": "best",  "type": "video", "sub": "Highest available"},
-                {"label": "✨ 4K (2160p)",        "value": "2160p", "type": "video", "sub": "Ultra HD"},
-                {"label": "🔷 2K (1440p)",        "value": "1440p", "type": "video", "sub": "Quad HD"},
-                {"label": "🎬 1080p",             "value": "1080p", "type": "video", "sub": "Full HD"},
-                {"label": "📹 720p",              "value": "720p",  "type": "video", "sub": "HD"},
-                {"label": "📺 480p",              "value": "480p",  "type": "video", "sub": "SD"},
-                {"label": "📱 360p",              "value": "360p",  "type": "video", "sub": "Low"},
-                {"label": "🔻 240p",              "value": "240p",  "type": "video", "sub": "Very Low"},
-                {"label": "🎵 Audio Only (MP3)",  "value": "audio", "type": "audio", "sub": "MP3 · No video"},
-            ]
+            # Scan real formats — only show resolutions that actually exist
+            formats = info.get("formats", [])
+            seen_heights = set()
+            for f in formats:
+                h = f.get("height")
+                vcodec = f.get("vcodec", "none")
+                if h and vcodec and vcodec != "none":
+                    seen_heights.add(h)
+
+            # Map height → label/sub
+            HEIGHT_META = {
+                2160: ("✨ 4K (2160p)",  "Ultra HD"),
+                1440: ("🔷 2K (1440p)",  "Quad HD"),
+                1080: ("🎬 1080p",        "Full HD"),
+                720:  ("📹 720p",         "HD"),
+                480:  ("📺 480p",         "SD"),
+                360:  ("📱 360p",         "Low"),
+                240:  ("🔻 240p",         "Very Low"),
+                144:  ("⬇️ 144p",         "Minimum"),
+            }
+
+            qualities = [{"label": "🏆 Best Quality", "value": "best", "type": "video", "sub": "Highest available"}]
+
+            for h in sorted(seen_heights, reverse=True):
+                label, sub = HEIGHT_META.get(h, (f"🎬 {h}p", "Video"))
+                qualities.append({"label": label, "value": f"{h}p", "type": "video", "sub": sub})
+
+            qualities.append({"label": "🎵 Audio Only (MP3)", "value": "audio", "type": "audio", "sub": "MP3 · No video"})
         else:
             qualities = [{"label": "🏆 Best Quality", "value": "best", "type": "video", "sub": "Highest available"}]
 
