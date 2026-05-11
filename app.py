@@ -133,6 +133,14 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/sw.js")
+def service_worker():
+    return send_file(
+        os.path.join(os.path.dirname(__file__), "sw.js"),
+        mimetype="application/javascript"
+    )
+
+
 @app.route("/api/download", methods=["POST"])
 def start_download():
     data = request.json
