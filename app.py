@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import subprocess
 import threading
 import uuid
@@ -169,6 +170,82 @@ def service_worker():
         os.path.join(os.path.dirname(__file__), "sw.js"),
         mimetype="application/javascript"
     )
+
+
+@app.route("/api/info", methods=["POST"])
+def get_info():
+    data = request.json
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+
+    try:
+        result = subprocess.run(
+            ["yt-dlp", "--dump-json", "--no-playlist", url],
+            capture_output=True, text=True, timeout=30
+        )
+        if result.returncode != 0:
+            return jsonify({"error": "Could not fetch video info. Check the URL."}), 400
+
+        info = json.loads(result.stdout)
+        title     = info.get("title", "Unknown")
+        thumbnail = info.get("thumbnail", "")
+        duration  = info.get("duration_string", "")
+        uploader  = info.get("uploader", "")
+
+        # Detect platform
+        webpage_url = info.get("webpage_url", url)
+        if "youtube.com" in webpage_url or "youtu.be" in webpage_url:
+            platform = "youtube"
+        elif "tiktok.com" in webpage_url:
+            platform = "tiktok"
+        elif "instagram.com" in webpage_url:
+            platform = "instagram"
+        else:
+            platform = "other"
+
+        # Build quality options
+        formats = info.get("formats", [])
+        seen_heights = set()
+        qualities = []
+
+        if platform == "youtube":
+            for f in formats:
+                h = f.get("height")
+                ext = f.get("ext", "")
+                vcodec = f.get("vcodec", "none")
+                if h and vcodec != "none" and h not in seen_heights:
+                    seen_heights.add(h)
+                    label = f"{h}p"
+                    if h >= 2160: label = f"4K ({h}p)"
+                    elif h >= 1440: label = f"2K ({h}p)"
+                    qualities.append({"label": label, "value": f"{h}p", "type": "video"})
+
+            # Sort highest first
+            qualities.sort(key=lambda x: int(x["value"].replace("p","").split("(")[-1].replace("p","")), reverse=True)
+
+            # Add best option at top
+            qualities.insert(0, {"label": "🏆 Best Quality", "value": "best", "type": "video"})
+            # Add audio
+            qualities.append({"label": "🎵 Audio Only (MP3)", "value": "audio", "type": "audio"})
+        else:
+            qualities = [
+                {"label": "🏆 Best Quality", "value": "best", "type": "video"},
+            ]
+
+        return jsonify({
+            "title": title,
+            "thumbnail": thumbnail,
+            "duration": duration,
+            "uploader": uploader,
+            "platform": platform,
+            "qualities": qualities,
+        })
+
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Timed out fetching video info. Try again."}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/download", methods=["POST"])

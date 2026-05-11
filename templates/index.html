@@ -349,6 +349,92 @@
     /* Only show quality for YouTube */
     .quality-section { display: none; }
     .quality-section.visible { display: block; }
+
+    /* ── Video Info Card ── */
+    .info-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 20px 22px; margin-bottom: 18px;
+      border: 1px solid rgba(138,80,255,0.2);
+      display: none; animation: slide-in 0.3s ease;
+      position: relative; overflow: hidden;
+    }
+    .info-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, #8a50ff, #c060ff, #60a0ff);
+      background-size: 200%; animation: bar-flow 2s linear infinite;
+    }
+    .info-card.visible { display: flex; gap: 14px; align-items: flex-start; }
+    .info-thumb {
+      width: 90px; height: 60px; border-radius: 10px;
+      object-fit: cover; flex-shrink: 0;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .info-thumb-placeholder {
+      width: 90px; height: 60px; border-radius: 10px;
+      background: rgba(138,80,255,0.1); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; border: 1px solid rgba(138,80,255,0.2);
+    }
+    .info-details { flex: 1; min-width: 0; }
+    .info-title {
+      font-size: 13px; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .info-meta { font-size: 11px; color: var(--subtext); margin-bottom: 12px; }
+
+    /* Quality grid */
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 8px;
+    }
+    .quality-option {
+      padding: 10px 12px; border-radius: 12px;
+      border: 1px solid rgba(138,80,255,0.2);
+      background: rgba(138,80,255,0.06);
+      cursor: pointer; text-align: center;
+      transition: all 0.2s cubic-bezier(.34,1.56,.64,1);
+      position: relative; overflow: hidden;
+    }
+    .quality-option:hover {
+      border-color: rgba(138,80,255,0.5);
+      background: rgba(138,80,255,0.12);
+      transform: translateY(-2px);
+    }
+    .quality-option.audio-opt {
+      border-color: rgba(255,160,60,0.25);
+      background: rgba(255,160,60,0.06);
+    }
+    .quality-option.audio-opt:hover {
+      border-color: rgba(255,160,60,0.5);
+      background: rgba(255,160,60,0.12);
+    }
+    .quality-option .q-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+    .quality-option .q-label { font-size: 12px; font-weight: 700; color: var(--text); }
+    .quality-option .q-sub { font-size: 10px; color: var(--subtext); margin-top: 2px; }
+
+    /* Check button */
+    .btn-check {
+      padding: 15px 22px; border-radius: 12px; border: none;
+      font-size: 14px; font-weight: 700; font-family: inherit;
+      cursor: pointer; white-space: nowrap; color: #fff;
+      background: linear-gradient(135deg, #8a50ff 0%, #c060ff 50%, #8a50ff 100%);
+      background-size: 200% 100%;
+      animation: btn-shift 3s ease infinite;
+      box-shadow: 0 0 24px rgba(138,80,255,0.5);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .btn-check::after {
+      content: '';
+      position: absolute; top: -50%; left: -60%; width: 30%; height: 200%;
+      background: rgba(255,255,255,0.15); transform: skewX(-20deg);
+      animation: btn-shine 3s ease-in-out infinite;
+    }
+    .btn-check:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 36px rgba(138,80,255,0.7); }
+    .btn-check:disabled { opacity: 0.4; cursor: not-allowed; transform: none; animation: none; }
     .url-input {
       flex: 1; padding: 15px 18px; border-radius: 12px;
       border: 1px solid rgba(138,80,255,0.2);
@@ -648,22 +734,19 @@
       <div class="input-row">
         <input type="url" id="urlInput" class="url-input"
           placeholder="https://www.youtube.com/watch?v=..."
-          autocomplete="off" spellcheck="false" oninput="detectPlatform(this.value)"/>
-        <button class="btn-download" id="dlBtn" onclick="startDownload()">Download</button>
+          autocomplete="off" spellcheck="false"/>
+        <button class="btn-check" id="checkBtn" onclick="checkVideo()">Check</button>
       </div>
+    </div>
+  </div>
 
-      <!-- Quality selector (shown only for YouTube) -->
-      <div class="quality-section" id="qualitySection" style="margin-top:16px;">
-        <span class="quality-label">Select Quality</span>
-        <div class="quality-row">
-          <button class="quality-btn active" onclick="setQuality('best',this)">🏆 Best</button>
-          <button class="quality-btn" onclick="setQuality('1080p',this)">🎬 1080p</button>
-          <button class="quality-btn" onclick="setQuality('720p',this)">📺 720p</button>
-          <button class="quality-btn" onclick="setQuality('480p',this)">📱 480p</button>
-          <button class="quality-btn" onclick="setQuality('360p',this)">💾 360p</button>
-          <button class="quality-btn" onclick="setQuality('audio',this)">🎵 Audio MP3</button>
-        </div>
-      </div>
+  <!-- Video Info + Quality Picker -->
+  <div class="info-card" id="infoCard">
+    <div id="infoThumb" class="info-thumb-placeholder">🎬</div>
+    <div class="info-details">
+      <div class="info-title" id="infoTitle">Loading…</div>
+      <div class="info-meta" id="infoMeta"></div>
+      <div class="quality-grid" id="qualityGrid"></div>
     </div>
   </div>
 
@@ -721,9 +804,9 @@
 </div>
 
 <script>
-/* ══════════════════════════════════════════
-   AURORA + DEEP SPACE NEBULA BACKGROUND
-══════════════════════════════════════════ */
+/* ══════════════════════════════════
+   AURORA + DEEP SPACE BACKGROUND
+ */
 (function() {
   const canvas = document.getElementById('bg-canvas');
   const ctx = canvas.getContext('2d');
@@ -915,7 +998,7 @@
 
 /* ══════════════════════
    APP LOGIC
-══════════════════════ */
+ */
 const placeholders = {
   youtube:   'https://www.youtube.com/watch?v=...',
   tiktok:    'https://www.tiktok.com/@k1llez.tt/video/...',
@@ -923,46 +1006,74 @@ const placeholders = {
   other:     'https://twitter.com/user/status/...'
 };
 
-let selectedQuality = 'best';
-
-function setQuality(q, btn) {
-  selectedQuality = q;
-  document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
-function detectPlatform(url) {
-  const qs = document.getElementById('qualitySection');
-  if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    qs.classList.add('visible');
-  } else {
-    qs.classList.remove('visible');
-    selectedQuality = 'best';
-  }
-}
+let currentUrl = '';
+let pollInterval = null;
 
 function setPlaceholder(p) {
   document.getElementById('urlInput').placeholder = placeholders[p];
   document.getElementById('urlInput').focus();
-  const qs = document.getElementById('qualitySection');
-  if (p === 'youtube') {
-    qs.classList.add('visible');
-  } else {
-    qs.classList.remove('visible');
-    selectedQuality = 'best';
+  resetCards();
+}
+
+function resetCards() {
+  document.getElementById('infoCard').classList.remove('visible');
+  document.getElementById('progressCard').classList.remove('visible');
+}
+
+async function checkVideo() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { alert('Please paste a video URL first!'); return; }
+  currentUrl = url;
+  const btn = document.getElementById('checkBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Checking…';
+  resetCards();
+  try {
+    const res = await fetch('/api/info', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showInfoCard(data);
+  } catch(e) {
+    alert('❌ ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Check';
   }
 }
 
-let pollInterval = null;
+function showInfoCard(data) {
+  const card = document.getElementById('infoCard');
+  const thumbEl = document.getElementById('infoThumb');
+  if (data.thumbnail) {
+    thumbEl.outerHTML = `<img id="infoThumb" class="info-thumb" src="${data.thumbnail}" onerror="this.outerHTML='<div id=infoThumb class=info-thumb-placeholder>🎬</div>'"/>`;
+  }
+  document.getElementById('infoTitle').textContent = data.title || 'Unknown';
+  document.getElementById('infoMeta').textContent = [data.uploader, data.duration].filter(Boolean).join(' · ');
+  const grid = document.getElementById('qualityGrid');
+  grid.innerHTML = '';
+  (data.qualities || []).forEach(q => {
+    const isAudio = q.type === 'audio';
+    const icon = isAudio ? '🎵' : q.value === 'best' ? '🏆' : q.label.includes('4K') ? '✨' : q.label.includes('2K') ? '🔷' : '🎬';
+    const sub = isAudio ? 'MP3 · No video' : q.value === 'best' ? 'Highest available' :
+                q.label.includes('1080') ? 'Full HD' : q.label.includes('720') ? 'HD' :
+                q.label.includes('4K') ? 'Ultra HD' : 'SD';
+    const div = document.createElement('div');
+    div.className = 'quality-option' + (isAudio ? ' audio-opt' : '');
+    div.innerHTML = `<span class="q-icon">${icon}</span><div class="q-label">${q.label}</div><div class="q-sub">${sub}</div>`;
+    div.onclick = () => startDownload(q.value);
+    grid.appendChild(div);
+  });
+  card.classList.add('visible');
+}
 
-async function startDownload() {
-  const url = document.getElementById('urlInput').value.trim();
-  if (!url) { alert('Please paste a video URL first!'); return; }
-
-  const btn = document.getElementById('dlBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Starting…';
-
+async function startDownload(quality) {
+  const url = currentUrl;
+  if (!url) return;
+  document.getElementById('infoCard').classList.remove('visible');
   const card = document.getElementById('progressCard');
   card.classList.add('visible');
   document.getElementById('progressTitle').textContent = 'Preparing download…';
@@ -971,21 +1082,16 @@ async function startDownload() {
   document.getElementById('progressStatus').textContent = 'Contacting server…';
   document.getElementById('progressStatus').className = 'progress-status';
   document.getElementById('saveBtn').style.display = 'none';
-
   try {
     const res = await fetch('/api/download', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({url, quality: selectedQuality})
+      body: JSON.stringify({url, quality})
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     pollStatus(data.job_id);
-  } catch(e) {
-    showError(e.message);
-    btn.disabled = false;
-    btn.textContent = 'Download';
-  }
+  } catch(e) { showError(e.message); }
 }
 
 function pollStatus(jobId) {
@@ -997,16 +1103,15 @@ function pollStatus(jobId) {
       const pct = Math.round(job.progress || 0);
       document.getElementById('progressBar').style.width = pct + '%';
       document.getElementById('progressPct').textContent = pct + '%';
-
       if (job.status === 'queued') {
         document.getElementById('progressStatus').textContent = '⏳ Queued…';
         document.getElementById('progressTitle').textContent = 'Waiting to start…';
       } else if (job.status === 'downloading') {
-        document.getElementById('progressTitle').textContent = 'Downloading in max quality…';
-        document.getElementById('progressStatus').textContent = job.log || 'Fetching video…';
+        document.getElementById('progressTitle').textContent = 'Downloading…';
+        document.getElementById('progressStatus').textContent = job.log || 'Fetching…';
       } else if (job.status === 'done') {
         clearInterval(pollInterval);
-        document.getElementById('progressTitle').textContent = '✅ Download complete!';
+        document.getElementById('progressTitle').textContent = '✅ Done!';
         document.getElementById('progressPct').textContent = '100%';
         document.getElementById('progressBar').style.width = '100%';
         document.getElementById('progressStatus').textContent = `Ready: ${job.filename}`;
@@ -1015,15 +1120,9 @@ function pollStatus(jobId) {
         saveBtn.href = `/api/file/${jobId}`;
         saveBtn.download = job.filename;
         saveBtn.style.display = 'inline-flex';
-        const btn = document.getElementById('dlBtn');
-        btn.disabled = false;
-        btn.textContent = 'Download Another';
       } else if (job.status === 'error') {
         clearInterval(pollInterval);
         showError(job.error || 'Something went wrong.');
-        const btn = document.getElementById('dlBtn');
-        btn.disabled = false;
-        btn.textContent = 'Try Again';
       }
     } catch(e) {}
   }, 800);
@@ -1037,8 +1136,7 @@ function showError(msg) {
 }
 
 document.getElementById('urlInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') startDownload();
+  if (e.key === 'Enter') checkVideo();
 });
 </script>
 </body>
-</html>
