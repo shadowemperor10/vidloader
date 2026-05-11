@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import base64
 import subprocess
 import threading
 import uuid
@@ -13,11 +14,28 @@ CORS(app)
 DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# Auto-update yt-dlp on every startup
+# ── Auto-update yt-dlp on every startup ──
 try:
     subprocess.run(["pip", "install", "--upgrade", "yt-dlp"], capture_output=True, timeout=120)
 except Exception:
     pass
+
+# ── Cookie file setup ──
+# Set YT_COOKIES env var in Railway to a base64-encoded cookies.txt (Netscape format)
+COOKIES_FILE = os.path.join(os.path.dirname(__file__), "yt_cookies.txt")
+
+def setup_cookies():
+    raw = os.environ.get("YT_COOKIES", "").strip()
+    if raw:
+        try:
+            content = base64.b64decode(raw).decode("utf-8")
+            with open(COOKIES_FILE, "w") as f:
+                f.write(content)
+            print("[cookies] Loaded YT_COOKIES from environment.")
+        except Exception as e:
+            print(f"[cookies] Failed to decode YT_COOKIES: {e}")
+
+setup_cookies()
 
 
 def sanitize_filename(name):
@@ -26,9 +44,9 @@ def sanitize_filename(name):
     return name.strip('_')
 
 
-SIZE_LIMITS  = {"youtube": None, "tiktok": 500*1024*1024, "instagram": 500*1024*1024, "other": 500*1024*1024}
-SIZE_LABELS  = {"youtube": "Unlimited", "tiktok": "500MB", "instagram": "500MB", "other": "500MB"}
-HEIGHT_META  = {
+SIZE_LIMITS = {"youtube": None, "tiktok": 500*1024*1024, "instagram": 500*1024*1024, "other": 500*1024*1024}
+SIZE_LABELS = {"youtube": "Unlimited", "tiktok": "500MB", "instagram": "500MB", "other": "500MB"}
+HEIGHT_META = {
     2160: ("✨ 4K (2160p)", "Ultra HD"),
     1440: ("🔷 2K (1440p)", "Quad HD"),
     1080: ("🎬 1080p",      "Full HD"),
@@ -40,12 +58,6 @@ HEIGHT_META  = {
 }
 
 jobs = {}
-
-DESKTOP_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-)
 
 
 def detect_platform(url):
@@ -59,29 +71,33 @@ def detect_platform(url):
 
 
 def base_args(platform):
-    """
-    Returns yt-dlp base args confirmed to work from cloud/Railway IPs.
-    YouTube: android_creator client bypasses bot/cookie check AND supports DASH.
-    TikTok:  plain desktop Chrome UA works fine from cloud IPs.
-    """
     common = ["yt-dlp", "--no-playlist", "--no-check-certificates", "--no-warnings"]
 
     if platform == "youtube":
-        return common + [
-            "--extractor-args", "youtube:player_client=android_creator,android_vr,web",
-            "--user-agent",
-            "com.google.android.youtube/19.09.37 (Linux; U; Android 12; GB) gzip",
+        args = common + [
+            "--extractor-args", "youtube:player_client=android_creator,android_vr,tv_embedded",
+            "--user-agent", "com.google.android.youtube/19.09.37 (Linux; U; Android 12; GB) gzip",
         ]
+        # Use cookies if available — bypasses bot check on datacenter IPs
+        if os.path.exists(COOKIES_FILE):
+            args += ["--cookies", COOKIES_FILE]
+        return args
+
     elif platform == "tiktok":
         return common + [
-            "--user-agent", DESKTOP_UA,
+            "--user-agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             "--add-header", "Referer:https://www.tiktok.com/",
             "--add-header", "Accept-Language:en-US,en;q=0.9",
+            "--extractor-args", "tiktok:app_name=tiktok_web",
         ]
+
     else:
-        # Instagram & others
         return common + [
-            "--user-agent", DESKTOP_UA,
+            "--user-agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             "--add-header", "Accept-Language:en-US,en;q=0.9",
         ]
 
